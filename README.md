@@ -1,8 +1,8 @@
-# everscore
-a network streaming score bug
-
 <img width="1072" alt="Screenshot 2025-05-14 at 11 52 25 AM" src="https://github.com/user-attachments/assets/32117233-1a84-4fb5-ba0b-d1c74ccb10da" />
 
+
+# everscore
+a network streaming score bug
 
 This is a utility we use at The Evergreen State College to enable our Daktronics scoreboard to drive a custom prerendered raytraced score bug. In our current livestream configuration, the streaming computer and camera are situated at the top of the bleachers, while the scoreboard and game management computer are at the courtside game table. This distance is too long to run a physical cable, so we connect the scoreboard hardware controller to the game management computer, which is running everscore, render the score bug, and stream a 960x540 feed of that score bug over the network via NDI to the streaming computer, which recieves the NDI feed and displays it in an overlay in OBS. This solution enables everscore to be used with any game streaming platform that supports NDI.
 
