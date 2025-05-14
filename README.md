@@ -1,6 +1,5 @@
 <img width="1072" alt="Screenshot 2025-05-14 at 11 52 25 AM" src="https://github.com/user-attachments/assets/32117233-1a84-4fb5-ba0b-d1c74ccb10da" />
 
-
 # everscore
 a network streaming score bug
 
