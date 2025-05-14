@@ -11,7 +11,7 @@ This is a utility we use at The Evergreen State College to enable our Daktronics
 - DistroAV (for recieving the NDI stream in OBS)
 
 # Roadmap
-This tool is still in development and still lacks critical user interface elements for features like manual control and IP address identification and diagnostics. There is currently a bug that causes the software to behave unpredictably if hidden, closed, or minimized. Once these issues are resolved and the tool is ready to be used in production, the following additional features are in the roadmap:
+This tool is still in development and still lacks critical user interface elements for features like team customization, manual control and IP address identification and diagnostics. There is currently a bug that causes the software to behave unpredictably if hidden, closed, or minimized. Once these issues are resolved and the tool is ready to be used in production, the following additional features are in the roadmap:
 
 - Basketball Mode - Summer 2025
 - Volleyball Mode - Fall 2025
