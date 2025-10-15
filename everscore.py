@@ -30,12 +30,17 @@ from typing import Any
 import serial.tools.list_ports
 from consoles.sports import Basketball
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QCloseEvent
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtQml import QQmlApplicationEngine
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
+
+
+def no_op(*args, **kwargs):
+    """A no-operation function to silence callbacks during shutdown."""
+    pass
 
 
 # --------------------------------------------------------------------- #
@@ -110,6 +115,16 @@ class UdpDataManager(QObject):
     packet_received = Signal(str, str)  # payload, ip_address
 
 
+class AppController(QObject):
+    @Slot()
+    def prepareToQuit(self):
+        """This slot is called from QML when the window is closing."""
+        print("Shutdown sequence initiated from QML. Arming failsafe exit.")
+        # Use a Python threading.Timer, which does not depend on the Qt event loop.
+        # This guarantees that os._exit will be called even if the Qt loop is blocked.
+        threading.Timer(0.5, lambda: os._exit(0)).start()
+
+
 # --------------------------------------------------------------------------- #
 # Main application
 # --------------------------------------------------------------------------- #
@@ -137,6 +152,7 @@ def main() -> None:
 
     dest_addr: tuple[str, int] | None = None
     basketball_instance = None
+    send_thread = None
 
     if args.mode == "send":
         if args.host.endswith(".255") or args.host == "255.255.255.255":
@@ -155,36 +171,14 @@ def main() -> None:
     # Initialise Qt/QML scene
     # --------------------------------------------------------------------- #
     app = QGuiApplication(sys.argv)
-
-    def on_quit():
-        """Signal threads to shut down and close resources."""
-        print("Shutting down...")
-        _shutdown_event.set()
-
-        if basketball_instance:
-            print("Closing serial connection...")
-            try:
-                if callable(getattr(basketball_instance, "close", None)):
-                    basketball_instance.close()
-                    print("Called basketball.close()")
-                elif hasattr(basketball_instance, "serial") and callable(
-                    getattr(basketball_instance.serial, "close", None)
-                ):
-                    basketball_instance.serial.close()
-                    print("Called basketball.serial.close()")
-            except Exception as e:
-                print(f"Error while trying to close basketball connection: {e}")
-
-        udp_sock.close()
-        print("UDP socket closed.")
-
-        # Failsafe: if the app hangs on exit, force quit after a delay.
-        QTimer.singleShot(1000, lambda: os._exit(0))
-
-    app.aboutToQuit.connect(on_quit)
     app.setQuitOnLastWindowClosed(True)
 
     engine = QQmlApplicationEngine()
+
+    # Create and register the AppController
+    app_controller = AppController()
+    engine.rootContext().setContextProperty("appController", app_controller)
+
     engine.quit.connect(app.quit)
     engine.load("main.qml")
 
@@ -194,7 +188,21 @@ def main() -> None:
 
     root = engine.rootObjects()[0]
 
+    # --------------------------------------------------------------------- #
+    # Shutdown Logic
+    # --------------------------------------------------------------------- #
+    def on_quit():
+        """Perform quick, non-blocking cleanup."""
+        print("aboutToQuit signal received. Disconnecting callback.")
+        _shutdown_event.set()
+        if basketball_instance:
+            basketball_instance.on_update = no_op
+
+    app.aboutToQuit.connect(on_quit)
+
+    # --------------------------------------------------------------------- #
     # Expose properties to QML
+    # --------------------------------------------------------------------- #
     root.setProperty("receiveMode", args.mode == "receive")
     root.setProperty("localIpAddress", get_local_ip())
 
@@ -203,7 +211,6 @@ def main() -> None:
     # --------------------------------------------------------------------- #
     basketballDigits: QQuickItem | None = root.findChild(QQuickItem, "basketballDigits")
     sourceIpInput: QQuickItem | None = root.findChild(QQuickItem, "sourceIpInput")
-    # ... (and all the other digit items)
 
     # --------------------------------------------------------------------- #
     # Signal handlers / slots (now running in the main GUI thread)
@@ -228,10 +235,15 @@ def main() -> None:
     @Slot(str, str)
     def handle_udp_packet(payload_str, ip_addr):
         """Handles packets from the UDP listener thread."""
+        target_ip = ""
         if sourceIpInput:
             target_ip = sourceIpInput.property("text")
-            if target_ip and ip_addr != target_ip:
-                return
+
+        # print(f"[Debug] Received packet from {ip_addr}. Target IP is '{target_ip}'.")
+
+        if target_ip and ip_addr != target_ip:
+            # print("[Debug] IP does not match. Ignoring packet.")
+            return
         try:
             state = json.loads(payload_str)
             if isinstance(state, dict) and is_auto_mode():
@@ -251,7 +263,8 @@ def main() -> None:
             serial_manager = SerialDataManager()
             basketball.on_update = serial_manager.data_received.emit
             serial_manager.data_received.connect(handle_serial_data)
-            threading.Thread(target=basketball.export, daemon=True).start()
+            send_thread = threading.Thread(target=basketball.export, daemon=True)
+            send_thread.start()
         except Exception as e:
             print(f"❌ Failed to open serial port {port}: {e}")
             sys.exit(1)
@@ -275,12 +288,6 @@ def main() -> None:
     # --------------------------------------------------------------------- #
     # Final setup and execution
     # --------------------------------------------------------------------- #
-    QTimer.singleShot(
-        0,
-        lambda: root.findChild(QQuickItem, "minuteTensItem").setProperty(
-            "visible", False
-        ),
-    )
     sys.exit(app.exec())
 
 

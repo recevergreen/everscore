@@ -16,6 +16,11 @@ Window {
     property bool receiveMode: false
     property string localIpAddress: "127.0.0.1"
 
+    onClosing: {
+        // Call the Python slot to arm the failsafe timer
+        appController.prepareToQuit();
+    }
+
     // animate any change to `width`
     Behavior on width {
         NumberAnimation {
@@ -510,30 +515,61 @@ Window {
             Binding {
                 target: controlPanel
                 property: "anchors.topMargin"
-                value: (controlModeGroup ? controlModeGroup.height : 0) + 16
+                value: (topControlsRow ? topControlsRow.height : 0) + 16
             }
 
-            GroupBox {
-                id: controlModeGroup
-                title: "Control Mode"
-                width: controlPanel ? controlPanel.width : 180
-                Column {
-                    spacing: 4
-                    Row {
-                        spacing: 8
-                        Switch {
-                            id: manualSwitch
-                            objectName: "manualSwitch"
-                            checked: true          // true = MANUAL, false = AUTOMATIC
-                            onToggled: {
-                                modeText.text = checked ? "Manual" : "Automatic";
-                                manualControlManager.updateVisibility();
+            Row {
+                id: topControlsRow
+                spacing: 16
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    margins: 16
+                }
+
+                GroupBox {
+                    id: controlModeGroup
+                    title: "Control Mode"
+                    Column {
+                        spacing: 4
+                        Row {
+                            spacing: 8
+                            Switch {
+                                id: manualSwitch
+                                objectName: "manualSwitch"
+                                checked: true          // true = MANUAL, false = AUTOMATIC
+                                onToggled: {
+                                    modeText.text = checked ? "Manual" : "Automatic";
+                                    manualControlManager.updateVisibility();
+                                }
+                            }
+                            Label {
+                                id: modeText
+                                text: "Manual"
+                                font.pixelSize: 18
                             }
                         }
-                        Label {
-                            id: modeText
-                            text: "Manual"
-                            font.pixelSize: 18
+                    }
+                }
+
+                GroupBox {
+                    title: "Operating Mode"
+                    Column {
+                        spacing: 4
+                        Row {
+                            spacing: 8
+                            Switch {
+                                id: modeSwitch
+                                objectName: "modeSwitch"
+                                checked: true          // true = SEND, false = RECEIVE
+                                onToggled: modeLabel.text = checked ? "Send" : "Receive"
+                            }
+                            Label {
+                                id: modeLabel
+                                text: "Send"
+                                font.pixelSize: 18
+                            }
                         }
                     }
                 }
@@ -564,37 +600,6 @@ Window {
                     function onToggled() {
                         manualControlManager.updateVisibility();
                     }
-                }
-            }
-
-            Component {
-                id: modeGroupComponent
-                GroupBox {
-                    title: "Operating Mode"
-                    width: controlPanel ? controlPanel.width : 180
-                    Column {
-                        spacing: 4
-                        Row {
-                            spacing: 8
-                            Switch {
-                                id: modeSwitch
-                                objectName: "modeSwitch"
-                                checked: true          // true = SEND, false = RECEIVE
-                                onToggled: modeLabel.text = checked ? "Send" : "Receive"
-                            }
-                            Label {
-                                id: modeLabel
-                                text: "Send"
-                                font.pixelSize: 18
-                            }
-                        }
-                    }
-                }
-            }
-
-            Component.onCompleted: {
-                if (controlPanel && modeGroupComponent.status === Component.Ready) {
-                    modeGroupComponent.createObject(controlPanel);
                 }
             }
 
@@ -649,7 +654,7 @@ Window {
 
                     StackLayout {
                         width: parent.width
-                        currentIndex: mainWindow.receiveMode ? 1 : 0
+                        currentIndex: modeSwitch.checked ? 0 : 1
 
                         Column {
                             spacing: 4
