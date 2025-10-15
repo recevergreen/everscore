@@ -3,6 +3,8 @@ import QtQuick.Window
 import QtMultimedia
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
+import Qt5Compat.GraphicalEffects
 
 Window {
     id: mainWindow
@@ -26,6 +28,17 @@ Window {
     onClosing: {
         // Call the Python slot to arm the failsafe timer
         appController.prepareToQuit();
+    }
+
+    ColorDialog {
+        id: colorDialog
+        title: "Select Opponent Color"
+        onAccepted: {
+            var newColor = colorDialog.selectedColor;
+            if (newColor) {
+                opponentColorOverlay.color = newColor;
+            }
+        }
     }
 
     // animate any change to `lockedWidth`
@@ -128,6 +141,16 @@ Window {
                     property int secondOnesDigit: 0
                     property int shotTensDigit: 0
                     property int shotOnesDigit: 0
+
+                    Rectangle {
+                        id: opponentColorOverlay
+                        x: 38
+                        y: 363
+                        width: 1048
+                        height: 324
+                        color: "blue"
+                        opacity: 0.5
+                    }
 
                     // single-frame PNG: no clipping needed
                     Item {
@@ -525,7 +548,7 @@ Window {
                 value: (topControlsRow ? topControlsRow.height : 0) + 16
             }
 
-            Row {
+            RowLayout {
                 id: topControlsRow
                 spacing: 16
                 anchors {
@@ -538,6 +561,7 @@ Window {
                 GroupBox {
                     id: controlModeGroup
                     title: "Control Mode"
+                    Layout.fillHeight: true
                     Column {
                         spacing: 4
                         Row {
@@ -562,6 +586,7 @@ Window {
 
                 GroupBox {
                     title: "Operating Mode"
+                    Layout.fillHeight: true
                     Column {
                         spacing: 4
                         Row {
@@ -578,6 +603,19 @@ Window {
                                 font.pixelSize: 18
                             }
                         }
+                    }
+                }
+
+                Button {
+                    id: settingsButton
+                    checkable: true
+                    checked: false
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: height
+                    Image {
+                        source: "media/settings.svg"
+                        anchors.fill: parent
+                        anchors.margins: 4
                     }
                 }
             }
@@ -655,180 +693,204 @@ Window {
                     }
                 }
 
-                GroupBox {
-                    title: "Network"
+                Column {
+                    id: mainControls
                     width: parent.width
+                    spacing: 16
+                    visible: !settingsButton.checked
 
-                    StackLayout {
+                    GroupBox {
+                        title: "Network"
                         width: parent.width
-                        currentIndex: modeSwitch.checked ? 0 : 1
 
+                        StackLayout {
+                            width: parent.width
+                            currentIndex: modeSwitch.checked ? 0 : 1
+
+                            Column {
+                                spacing: 4
+                                Label {
+                                    text: "Broadcasting to network from:"
+                                }
+                                Label {
+                                    text: mainWindow.localIpAddress
+                                    font.bold: true
+                                }
+                            }
+                            Column {
+                                spacing: 4
+                                Label {
+                                    text: "Source IP Address"
+                                }
+                                TextField {
+                                    id: sourceIpInput
+                                    objectName: "sourceIpInput"
+                                    width: parent.width
+                                    text: "10.20.67.92"
+                                    placeholderText: "Leave empty to accept from any IP"
+                                }
+                            }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Home Score"
+                        width: parent.width
                         Column {
                             spacing: 4
-                            Label {
-                                text: "Broadcasting to network from:"
-                            }
-                            Label {
-                                text: mainWindow.localIpAddress
-                                font.bold: true
+                            Row {
+                                spacing: 4
+                                Button {
+                                    text: "▲"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "▼"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "⟲"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("home", 0);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Label {
+                                    text: controlPanel.homeScore
+                                    font.pixelSize: 18
+                                }
                             }
                         }
+                    }
+
+                    GroupBox {
+                        title: "Visitor Score"
+                        width: parent.width
                         Column {
                             spacing: 4
-                            Label {
-                                text: "Source IP Address"
+                            Row {
+                                spacing: 4
+                                Button {
+                                    text: "▲"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "▼"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "⟲"
+                                    onClicked: {
+                                        controlPanel.setScoreDigits("visitor", 0);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Label {
+                                    text: controlPanel.visitorScore
+                                    font.pixelSize: 18
+                                }
                             }
-                            TextField {
-                                id: sourceIpInput
-                                objectName: "sourceIpInput"
-                                width: parent.width
-                                text: "10.20.67.92"
-                                placeholderText: "Leave empty to accept from any IP"
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Home Fouls"
+                        width: parent.width
+                        Column {
+                            spacing: 4
+                            Row {
+                                spacing: 4
+                                Button {
+                                    text: "▲"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "▼"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "⟲"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("home", 0);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Label {
+                                    text: controlPanel.homeFouls
+                                    font.pixelSize: 18
+                                }
+                            }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Visitor Fouls"
+                        width: parent.width
+                        Column {
+                            spacing: 4
+                            Row {
+                                spacing: 4
+                                Button {
+                                    text: "▲"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "▼"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Button {
+                                    text: "⟲"
+                                    onClicked: {
+                                        controlPanel.setFoulDigits("visitor", 0);
+                                        appController.sendManualUpdate();
+                                    }
+                                }
+                                Label {
+                                    text: controlPanel.visitorFouls
+                                    font.pixelSize: 18
+                                }
                             }
                         }
                     }
                 }
-
-                GroupBox {
-                    title: "Home Score"
+                Column {
+                    id: settingsControls
                     width: parent.width
-                    Column {
-                        spacing: 4
-                        Row {
-                            spacing: 4
-                            Button {
-                                text: "▲"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "▼"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "⟲"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("home", 0);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Label {
-                                text: controlPanel.homeScore
-                                font.pixelSize: 18
-                            }
-                        }
+                    spacing: 16
+                    visible: settingsButton.checked
+
+                    Label {
+                        text: "Opponent Color"
+                        font.pixelSize: 18
                     }
-                }
-
-                GroupBox {
-                    title: "Visitor Score"
-                    width: parent.width
-                    Column {
-                        spacing: 4
-                        Row {
-                            spacing: 4
-                            Button {
-                                text: "▲"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "▼"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "⟲"
-                                onClicked: {
-                                    controlPanel.setScoreDigits("visitor", 0);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Label {
-                                text: controlPanel.visitorScore
-                                font.pixelSize: 18
-                            }
-                        }
-                    }
-                }
-
-                GroupBox {
-                    title: "Home Fouls"
-                    width: parent.width
-                    Column {
-                        spacing: 4
-                        Row {
-                            spacing: 4
-                            Button {
-                                text: "▲"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "▼"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "⟲"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("home", 0);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Label {
-                                text: controlPanel.homeFouls
-                                font.pixelSize: 18
-                            }
-                        }
-                    }
-                }
-
-                GroupBox {
-                    title: "Visitor Fouls"
-                    width: parent.width
-                    Column {
-                        spacing: 4
-                        Row {
-                            spacing: 4
-                            Button {
-                                text: "▲"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "▼"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Button {
-                                text: "⟲"
-                                onClicked: {
-                                    controlPanel.setFoulDigits("visitor", 0);
-                                    appController.sendManualUpdate();
-                                }
-                            }
-                            Label {
-                                text: controlPanel.visitorFouls
-                                font.pixelSize: 18
-                            }
+                    Button {
+                        text: "Select"
+                        onClicked: {
+                            colorDialog.open();
                         }
                     }
                 }
