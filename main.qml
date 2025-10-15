@@ -7,8 +7,15 @@ import QtQuick.Layouts
 Window {
     id: mainWindow
     visible: true
-    width: 960
+
+    property int lockedWidth: 960
+    width: lockedWidth
     height: 540
+    minimumWidth: lockedWidth
+    maximumWidth: lockedWidth
+    minimumHeight: height
+    maximumHeight: height
+
     title: qsTr("everscore")
     color: "black"
 
@@ -21,8 +28,8 @@ Window {
         appController.prepareToQuit();
     }
 
-    // animate any change to `width`
-    Behavior on width {
+    // animate any change to `lockedWidth`
+    Behavior on lockedWidth {
         NumberAnimation {
             duration: 1000
             easing.type: Easing.InOutQuad
@@ -47,7 +54,7 @@ Window {
             if (mediaStatus === MediaPlayer.EndOfMedia) {
                 // this will trigger the Behavior above
                 mainWindow.xanimationduration = 1000;
-                mainWindow.width = 1365;
+                mainWindow.lockedWidth = 1365;
                 mainWindow.x = mainWindow.x - 202;
                 mainInterface.visible = true;
             }
@@ -538,7 +545,7 @@ Window {
                             Switch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
-                                checked: true          // true = MANUAL, false = AUTOMATIC
+                                checked: false          // true = MANUAL, false = AUTOMATIC
                                 onToggled: {
                                     modeText.text = checked ? "Manual" : "Automatic";
                                     manualControlManager.updateVisibility();
@@ -546,7 +553,7 @@ Window {
                             }
                             Label {
                                 id: modeText
-                                text: "Manual"
+                                text: "Automatic"
                                 font.pixelSize: 18
                             }
                         }
@@ -562,12 +569,12 @@ Window {
                             Switch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
-                                checked: true          // true = SEND, false = RECEIVE
+                                checked: false          // true = SEND, false = RECEIVE
                                 onToggled: modeLabel.text = checked ? "Send" : "Receive"
                             }
                             Label {
                                 id: modeLabel
-                                text: "Send"
+                                text: "Receive"
                                 font.pixelSize: 18
                             }
                         }
@@ -675,6 +682,7 @@ Window {
                                 id: sourceIpInput
                                 objectName: "sourceIpInput"
                                 width: parent.width
+                                text: "10.20.67.92"
                                 placeholderText: "Leave empty to accept from any IP"
                             }
                         }
