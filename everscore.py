@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import os.path
 import signal
 import socket
 import sys
@@ -352,19 +353,35 @@ def main() -> None:
     serial_manager = SerialDataManager()
     serial_manager.data_received.connect(handle_serial_data)
 
-    def serial_thread_target():
-        port = find_prolific_port() or "/dev/cu.PL2303-00001014"
-        print(f"🔌 Attempting to open scoreboard serial port: {port}")
-        try:
-            basketball = Basketball(port)
-            basketball.on_update = serial_manager.data_received.emit
-            # Block and read from the serial port until shutdown
-            basketball.export()
-        except Exception as e:
-            print(
-                f"❌ Serial port thread failed: {e}. Serial functionality will be disabled."
-            )
-        print("Serial thread finished.")
+        def serial_thread_target():
+
+            port = find_prolific_port() or "/dev/cu.PL2303-00001014"
+
+            if not os.path.exists(port):
+
+                print(f"ℹ️ Serial port '{port}' not found. Serial input will be disabled.")
+
+                return
+
+
+
+            print(f"🔌 Attempting to open scoreboard serial port: {port}")
+
+            try:
+
+                basketball = Basketball(port)
+
+                basketball.on_update = serial_manager.data_received.emit
+
+                # Block and read from the serial port until shutdown
+
+                basketball.export()
+
+            except Exception as e:
+
+                print(f"❌ Serial port thread failed: {e}. Serial functionality will be disabled.")
+
+            print("Serial thread finished.")
 
     threading.Thread(target=serial_thread_target, daemon=True).start()
 
