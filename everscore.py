@@ -143,7 +143,7 @@ def main() -> None:
     # --------------------------------------------------------------------- #
     parser = argparse.ArgumentParser(description="Virtual Basketball Scoreboard")
     parser.add_argument(
-        "--mode", choices=("send", "receive"), default="send", help="Operating mode."
+        "--mode", choices=("send", "receive"), default="receive", help="Operating mode."
     )
     parser.add_argument(
         "--host",
