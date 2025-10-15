@@ -244,10 +244,9 @@ def main() -> None:
     @Slot(dict)
     def handle_serial_data(data):
         """Handles data from the serial port thread."""
-        # --- TEMPORARY DEBUG: Force UI update regardless of mode ---
         # Only process serial data if we are in automatic mode.
-        # if not is_auto_mode():
-        #     return
+        if not is_auto_mode():
+            return
 
         # In auto mode, update the screen...
         score_updater.updateScore.emit(data)
