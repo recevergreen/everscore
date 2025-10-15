@@ -570,14 +570,10 @@ Window {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
                                 checked: false          // true = MANUAL, false = AUTOMATIC
-                                onToggled: {
-                                    modeText.text = checked ? "Manual" : "Automatic";
-                                    manualControlManager.updateVisibility();
-                                }
                             }
                             Label {
                                 id: modeText
-                                text: "Automatic"
+                                text: manualSwitch.checked ? "Manual" : "Automatic"
                                 font.pixelSize: 18
                             }
                         }
@@ -616,34 +612,6 @@ Window {
                         source: "media/settings.svg"
                         anchors.fill: parent
                         anchors.margins: 4
-                    }
-                }
-            }
-
-            Item {
-                id: manualControlManager
-                function updateVisibility() {
-                    if (!controlPanel)
-                        return;
-                    for (var i = 0; i < controlPanel.children.length; ++i) {
-                        var g = controlPanel.children[i];
-                        if (g && (g.title === "Home Score" || g.title === "Visitor Score" || g.title === "Home Fouls" || g.title === "Visitor Fouls")) {
-                            g.visible = manualSwitch.checked;
-                        }
-                    }
-                }
-
-                Timer {
-                    interval: 0
-                    running: true
-                    repeat: false
-                    onTriggered: manualControlManager.updateVisibility()
-                }
-
-                Connections {
-                    target: manualSwitch
-                    function onToggled() {
-                        manualControlManager.updateVisibility();
                     }
                 }
             }
@@ -736,6 +704,7 @@ Window {
                     GroupBox {
                         title: "Home Score"
                         width: parent.width
+                        visible: manualSwitch.checked
                         Column {
                             spacing: 4
                             Row {
@@ -772,6 +741,7 @@ Window {
                     GroupBox {
                         title: "Visitor Score"
                         width: parent.width
+                        visible: manualSwitch.checked
                         Column {
                             spacing: 4
                             Row {
@@ -808,6 +778,7 @@ Window {
                     GroupBox {
                         title: "Home Fouls"
                         width: parent.width
+                        visible: manualSwitch.checked
                         Column {
                             spacing: 4
                             Row {
@@ -844,6 +815,7 @@ Window {
                     GroupBox {
                         title: "Visitor Fouls"
                         width: parent.width
+                        visible: manualSwitch.checked
                         Column {
                             spacing: 4
                             Row {
