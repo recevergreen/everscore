@@ -669,7 +669,7 @@ Window {
                         Column {
                             spacing: 4
                             Label {
-                                text: "Source IP Address (optional)"
+                                text: "Source IP Address"
                             }
                             TextField {
                                 id: sourceIpInput
