@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import socket
 import sys
 import threading
@@ -119,10 +120,18 @@ class AppController(QObject):
     @Slot()
     def prepareToQuit(self):
         """This slot is called from QML when the window is closing."""
-        print("Shutdown sequence initiated from QML. Arming failsafe exit.")
+        print("Shutdown sequence initiated. Arming process group termination.")
+
+        def kill_process_group():
+            print("Failsafe timer fired. Terminating process group.")
+            try:
+                os.killpg(os.getpgrp(), signal.SIGKILL)
+            except Exception as e:
+                print(f"Failed to kill process group: {e}. Falling back to os._exit().")
+                os._exit(1)
+
         # Use a Python threading.Timer, which does not depend on the Qt event loop.
-        # This guarantees that os._exit will be called even if the Qt loop is blocked.
-        threading.Timer(0.5, lambda: os._exit(0)).start()
+        threading.Timer(0.5, kill_process_group).start()
 
 
 # --------------------------------------------------------------------------- #
