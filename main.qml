@@ -152,6 +152,16 @@ Window {
                         opacity: 0.5
                     }
 
+                    Image {
+                        id: clockSeparator
+                        x: controlPanel.isFastClockActive ? 1523 : 1409
+                        y: 833
+                        width: 65
+                        height: 163
+                        source: controlPanel.isFastClockActive ? "file:media/decimalpoint.png" : "file:media/colon.png"
+                        visible: controlPanel.clockTimeInTenths > 0
+                    }
+
                     // single-frame PNG: no clipping needed
                     Item {
                         id: awayHundreds
@@ -636,6 +646,8 @@ Window {
                 readonly property int clockCurrentSeconds: controlPanel.clockCurrentTotalSeconds % 60
                 readonly property int clockCurrentTenths: controlPanel.clockTimeInTenths % 10
 
+                readonly property bool isFastClockActive: controlPanel.clockCurrentTotalSeconds < 60 && controlPanel.clockTimeInTenths > 0
+
                 Timer {
                     id: clockTimer
                     interval: 100 // Run every 100ms for tenths of a second
@@ -660,18 +672,16 @@ Window {
                 }
 
                 onClockTimeInTenthsChanged: {
-                    var showFastClock = controlPanel.clockCurrentTotalSeconds < 60 && controlPanel.clockTimeInTenths > 0;
-
                     // Toggle visibility of clock digits
-                    minuteTens.visible = !showFastClock;
-                    minuteOnes.visible = !showFastClock;
-                    secondTens.visible = !showFastClock;
-                    secondOnes.visible = !showFastClock;
-                    fastTens.visible = showFastClock;
-                    fastOnes.visible = showFastClock;
-                    fastTenths.visible = showFastClock;
+                    minuteTens.visible = !controlPanel.isFastClockActive;
+                    minuteOnes.visible = !controlPanel.isFastClockActive;
+                    secondTens.visible = !controlPanel.isFastClockActive;
+                    secondOnes.visible = !controlPanel.isFastClockActive;
+                    fastTens.visible = controlPanel.isFastClockActive;
+                    fastOnes.visible = controlPanel.isFastClockActive;
+                    fastTenths.visible = controlPanel.isFastClockActive;
 
-                    if (showFastClock) {
+                    if (controlPanel.isFastClockActive) {
                         var seconds = controlPanel.clockCurrentSeconds;
                         var tenths = controlPanel.clockCurrentTenths;
                         basketballDigits.fastTensDigit = Math.floor(seconds / 10) % 10;
