@@ -627,29 +627,31 @@ Window {
                 property int homeFouls: 0
                 property int visitorFouls: 0
 
-                property int clockTimeInSeconds: 0
+                property int clockTimeInTenths: 0
                 property bool clockRunning: false
 
                 // Read-only properties for display
-                readonly property int clockCurrentMinutes: Math.floor(controlPanel.clockTimeInSeconds / 60)
-                readonly property int clockCurrentSeconds: controlPanel.clockTimeInSeconds % 60
+                readonly property int clockCurrentTotalSeconds: Math.floor(controlPanel.clockTimeInTenths / 10)
+                readonly property int clockCurrentMinutes: Math.floor(controlPanel.clockCurrentTotalSeconds / 60)
+                readonly property int clockCurrentSeconds: controlPanel.clockCurrentTotalSeconds % 60
+                readonly property int clockCurrentTenths: controlPanel.clockTimeInTenths % 10
 
                 Timer {
                     id: clockTimer
-                    interval: 1000
+                    interval: 100 // Run every 100ms for tenths of a second
                     repeat: true
                     running: controlPanel.clockRunning
                     onTriggered: {
                         if (countDownSwitch.checked) {
-                            if (controlPanel.clockTimeInSeconds > 0) {
-                                controlPanel.clockTimeInSeconds--;
+                            if (controlPanel.clockTimeInTenths > 0) {
+                                controlPanel.clockTimeInTenths--;
                             } else {
                                 controlPanel.clockRunning = false;
                             }
                         } else {
-                            // Cap counting up at 99:59
-                            if (controlPanel.clockTimeInSeconds < 5999) {
-                                controlPanel.clockTimeInSeconds++;
+                            // Cap counting up at 99:59.9
+                            if (controlPanel.clockTimeInTenths < 59999) {
+                                controlPanel.clockTimeInTenths++;
                             } else {
                                 controlPanel.clockRunning = false;
                             }
@@ -657,20 +659,39 @@ Window {
                     }
                 }
 
-                onClockTimeInSecondsChanged: {
-                    var minutes = controlPanel.clockCurrentMinutes;
-                    var seconds = controlPanel.clockCurrentSeconds;
+                onClockTimeInTenthsChanged: {
+                    var showFastClock = controlPanel.clockCurrentTotalSeconds < 60 && controlPanel.clockTimeInTenths > 0;
 
-                    // Update scoreboard
-                    basketballDigits.minuteTensDigit = Math.floor(minutes / 10) % 10;
-                    basketballDigits.minuteOnesDigit = minutes % 10;
-                    basketballDigits.secondTensDigit = Math.floor(seconds / 10) % 10;
-                    basketballDigits.secondOnesDigit = seconds % 10;
+                    // Toggle visibility of clock digits
+                    minuteTens.visible = !showFastClock;
+                    minuteOnes.visible = !showFastClock;
+                    secondTens.visible = !showFastClock;
+                    secondOnes.visible = !showFastClock;
+                    fastTens.visible = showFastClock;
+                    fastOnes.visible = showFastClock;
+                    fastTenths.visible = showFastClock;
+
+                    if (showFastClock) {
+                        var seconds = controlPanel.clockCurrentSeconds;
+                        var tenths = controlPanel.clockCurrentTenths;
+                        basketballDigits.fastTensDigit = Math.floor(seconds / 10) % 10;
+                        basketballDigits.fastOnesDigit = seconds % 10;
+                        basketballDigits.fastTenthsDigit = tenths;
+                    } else {
+                        var minutes = controlPanel.clockCurrentMinutes;
+                        var seconds = controlPanel.clockCurrentSeconds;
+                        basketballDigits.minuteTensDigit = Math.floor(minutes / 10) % 10;
+                        basketballDigits.minuteOnesDigit = minutes % 10;
+                        basketballDigits.secondTensDigit = Math.floor(seconds / 10) % 10;
+                        basketballDigits.secondOnesDigit = seconds % 10;
+                    }
                     appController.sendManualUpdate();
 
                     // Update UI
-                    clockMinutesInput.text = minutes.toString().padStart(2, '0');
-                    clockSecondsInput.text = seconds.toString().padStart(2, '0');
+                    if (controlPanel.clockRunning) {
+                        clockMinutesInput.text = controlPanel.clockCurrentMinutes.toString().padStart(2, '0');
+                        clockSecondsInput.text = controlPanel.clockCurrentSeconds.toString().padStart(2, '0');
+                    }
                 }
 
                 function setScoreDigits(team, value) {
@@ -767,7 +788,7 @@ Window {
                                     text: "00"
                                     enabled: !controlPanel.clockRunning
                                     onEditingFinished: {
-                                        controlPanel.clockTimeInSeconds = parseInt(text) * 60 + parseInt(clockSecondsInput.text);
+                                        controlPanel.clockTimeInTenths = (parseInt(text) * 60 + parseInt(clockSecondsInput.text)) * 10;
                                     }
                                 }
                                 Label {
@@ -784,7 +805,7 @@ Window {
                                     text: "00"
                                     enabled: !controlPanel.clockRunning
                                     onEditingFinished: {
-                                        controlPanel.clockTimeInSeconds = parseInt(clockMinutesInput.text) * 60 + parseInt(text);
+                                        controlPanel.clockTimeInTenths = (parseInt(clockMinutesInput.text) * 60 + parseInt(text)) * 10;
                                     }
                                 }
                                 Button {
@@ -792,8 +813,8 @@ Window {
                                     text: controlPanel.clockRunning ? "Stop" : "Start"
                                     onClicked: {
                                         if (!controlPanel.clockRunning) {
-                                            // When starting, make sure clockTimeInSeconds is up to date
-                                            controlPanel.clockTimeInSeconds = parseInt(clockMinutesInput.text) * 60 + parseInt(clockSecondsInput.text);
+                                            // When starting, make sure clockTimeInTenths is up to date
+                                            controlPanel.clockTimeInTenths = (parseInt(clockMinutesInput.text) * 60 + parseInt(clockSecondsInput.text)) * 10;
                                         }
                                         controlPanel.clockRunning = !controlPanel.clockRunning;
                                     }
