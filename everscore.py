@@ -224,6 +224,15 @@ def main() -> None:
     basketballDigits: QQuickItem | None = root.findChild(QQuickItem, "basketballDigits")
     sourceIpInput: QQuickItem | None = root.findChild(QQuickItem, "sourceIpInput")
 
+    if not basketballDigits:
+        print(
+            "❌ Critical error: Could not find QML item with objectName 'basketballDigits'. UI will not update."
+        )
+    if not sourceIpInput:
+        print(
+            "⚠️ Warning: Could not find QML item with objectName 'sourceIpInput'. IP filtering will not work."
+        )
+
     # --------------------------------------------------------------------- #
     # Signal handlers / slots (now running in the main GUI thread)
     # --------------------------------------------------------------------- #
@@ -235,8 +244,15 @@ def main() -> None:
     @Slot(dict)
     def handle_serial_data(data):
         """Handles data from the serial port thread."""
-        if is_auto_mode():
-            score_updater.updateScore.emit(data)
+        # --- TEMPORARY DEBUG: Force UI update regardless of mode ---
+        # Only process serial data if we are in automatic mode.
+        # if not is_auto_mode():
+        #     return
+
+        # In auto mode, update the screen...
+        score_updater.updateScore.emit(data)
+
+        # ...and broadcast the data if in send mode.
         if dest_addr and not _shutdown_event.is_set():
             try:
                 udp_sock.sendto(json.dumps(data).encode(), dest_addr)
