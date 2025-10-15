@@ -690,15 +690,24 @@ Window {
                             spacing: 4
                             Button {
                                 text: "▲"
-                                onClicked: controlPanel.setScoreDigits("home", controlPanel.homeScore + 1)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "▼"
-                                onClicked: controlPanel.setScoreDigits("home", controlPanel.homeScore - 1)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "⟲"
-                                onClicked: controlPanel.setScoreDigits("home", 0)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("home", 0);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Label {
                                 text: controlPanel.homeScore
@@ -717,15 +726,24 @@ Window {
                             spacing: 4
                             Button {
                                 text: "▲"
-                                onClicked: controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "▼"
-                                onClicked: controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "⟲"
-                                onClicked: controlPanel.setScoreDigits("visitor", 0)
+                                onClicked: {
+                                    controlPanel.setScoreDigits("visitor", 0);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Label {
                                 text: controlPanel.visitorScore
@@ -744,15 +762,24 @@ Window {
                             spacing: 4
                             Button {
                                 text: "▲"
-                                onClicked: controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "▼"
-                                onClicked: controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "⟲"
-                                onClicked: controlPanel.setFoulDigits("home", 0)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("home", 0);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Label {
                                 text: controlPanel.homeFouls
@@ -771,15 +798,24 @@ Window {
                             spacing: 4
                             Button {
                                 text: "▲"
-                                onClicked: controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "▼"
-                                onClicked: controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Button {
                                 text: "⟲"
-                                onClicked: controlPanel.setFoulDigits("visitor", 0)
+                                onClicked: {
+                                    controlPanel.setFoulDigits("visitor", 0);
+                                    appController.sendManualUpdate();
+                                }
                             }
                             Label {
                                 text: controlPanel.visitorFouls
