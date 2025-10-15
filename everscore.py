@@ -2,215 +2,387 @@
 """
 Virtual Scoreboard Client
 --------------------------
-Connects to a physical Daktronics-compatible scoreboard over USB-serial (Prolific PL2303)
-and renders a virtual scoreboard via QML, streaming frames over NDI.
+Displays a virtual Daktronics-style basketball scoreboard in QML.
+
+Two operating modes are supported:
+
+SEND     –  Read the game state from the physical scoreboard over USB-serial
+                                                                                                and broadcast that state on the network as JSON over UDP.
+
+RECEIVE  –  Listen for JSON scoreboard packets on the network and drive the
+                                                                                                on-screen scoreboard with the received data.
+
+Usage:
+                                python everscore.py --mode send     # default
+                                python everscore.py --mode receive  # network listener
 """
 
-import sys
-import numpy as np
-import NDIlib as ndi
-import serial.tools.list_ports
-from threading import Thread
-from consoles.sports import Basketball
+from __future__ import annotations
 
-from PySide6.QtCore import QTimer, Qt, QObject, Signal
-from PySide6.QtGui import QGuiApplication, QImage
+import argparse
+import json
+import os
+import socket
+import sys
+import threading
+from typing import Any
+
+import serial.tools.list_ports
+from consoles.sports import Basketball
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtQml import QQmlApplicationEngine
 
-# Bridge to marshal scoreboard updates onto the Qt main thread
+# Event to signal shutdown to background threads
+_shutdown_event = threading.Event()
+
+
+# --------------------------------------------------------------------- #
+#  Helper: figure out whether the UI is currently in “automatic” mode
+# --------------------------------------------------------------------- #
+def is_auto_mode() -> bool:
+    """
+    Interrogate the QML scene and return True when the “Automatic” switch
+    is checked. If the switch or window is not yet available, falls back to True.
+    """
+    try:
+        windows = QGuiApplication.allWindows()
+        if not windows:
+            return True
+        root_obj: QObject = windows[0]
+        sw: QObject | None = root_obj.findChild(QObject, "manualSwitch")  # type: ignore
+        if sw is not None:
+            return not bool(sw.property("checked"))
+    except Exception:
+        pass  # Fallback on any error
+    return True  # Safest default
+
+
+# --------------------------------------------------------------------- #
+#  Helper: Get local IP address
+# --------------------------------------------------------------------- #
+def get_local_ip() -> str:
+    """Get the local IP address of the machine."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't have to be reachable
+        s.connect(("10.255.255.255", 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = "127.0.0.1"
+    finally:
+        s.close()
+    return IP
+
+
+def find_prolific_port() -> str | None:
+    """
+    Scan serial ports and return the first PL2303/Prolific device, if any.
+    """
+    for port in serial.tools.list_ports.comports():
+        if (
+            "pl2303" in (port.description or "").lower()
+            or "prolific" in (port.manufacturer or "").lower()
+        ):
+            return port.device
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# Qt signal bridges for thread-safe communication
+# --------------------------------------------------------------------------- #
 class ScoreUpdater(QObject):
-	updateScore = Signal(dict)
+    """Updates the main scoreboard GUI."""
 
-score_updater = ScoreUpdater()
-
-
-def find_prolific_port():
-	"""
-	Scan serial ports and return the first PL2303/Prolific device, if any.
-	"""
-	for port in serial.tools.list_ports.comports():
-		desc = (port.description or "").lower()
-		manf = (port.manufacturer or "").lower()
-		if "pl2303" in desc or "prolific" in manf:
-			return port.device
-	return None
+    updateScore = Signal(dict)
 
 
-def main():
-	# Initialize NDI
-	if not ndi.initialize():
-		print("❌ Failed to initialize NDI")
-		sys.exit(1)
-	settings = ndi.SendCreate()
-	settings.ndi_name = "everscore"
-	ndi_send = ndi.send_create(settings)
-	if not ndi_send:
-		print("❌ Could not create NDI sender – is the NDI runtime installed?")
-		sys.exit(1)
-	video_frame = ndi.VideoFrameV2()
+class SerialDataManager(QObject):
+    """Handles data coming from the serial thread."""
 
-	# Initialize Qt/QML
-	app = QGuiApplication(sys.argv)
-	engine = QQmlApplicationEngine()
-	engine.load("main.qml")
-	if not engine.rootObjects():
-		print("❌ Failed to load QML")
-		sys.exit(1)
+    data_received = Signal(dict)
 
-	root = engine.rootObjects()[0]
-	# Find QML items
-	viewport           = root.findChild(QQuickItem, "viewportToStream")
-	basketballDigits   = root.findChild(QQuickItem, "basketballDigits")
-	minuteTensItem     = root.findChild(QQuickItem, "minuteTens")
-	minuteOnesItem     = root.findChild(QQuickItem, "minuteOnes")
-	secondTensItem     = root.findChild(QQuickItem, "secondTens")
-	secondOnesItem     = root.findChild(QQuickItem, "secondOnes")
-	fastTensItem       = root.findChild(QQuickItem, "fastTens")
-	fastOnesItem       = root.findChild(QQuickItem, "fastOnes")
-	fastTenthsItem     = root.findChild(QQuickItem, "fastTenths")
 
-	if None in (viewport, basketballDigits,
-				minuteTensItem, minuteOnesItem,
-				secondTensItem, secondOnesItem,
-				fastTensItem, fastOnesItem, fastTenthsItem):
-		print("❌ Could not find required QML items")
-		sys.exit(1)
+class UdpDataManager(QObject):
+    """Handles data coming from the UDP thread."""
 
-	# Prepare NDI frame buffer
-	w, h = int(viewport.width()), int(viewport.height())
-	frame_buffer = np.empty((h, w, 4), dtype=np.uint8)
-	video_frame.data = frame_buffer
-	video_frame.xres = w
-	video_frame.yres = h
-	video_frame.FourCC = ndi.FOURCC_VIDEO_TYPE_BGRA
-	video_frame.frame_rate_N = 24
-	video_frame.frame_rate_D = 1
+    packet_received = Signal(str, str)  # payload, ip_address
 
-	# Frame grab + NDI send
-	pending = []
-	def grab_and_send():
-		if not root.isVisible(): return
-		gr = viewport.grabToImage()
-		if not gr: return
-		pending.append(gr)
-		def on_ready():
-			img = gr.image().convertToFormat(QImage.Format_ARGB32)
-			img = img.scaled(w, h, Qt.IgnoreAspectRatio, Qt.FastTransformation)
-			raw = img.bits()[:w*h*4]
-			arr = np.frombuffer(raw, dtype=np.uint8).reshape(h, w, 4)
-			frame_buffer[:] = arr
-			ndi.send_send_video_v2(ndi_send, video_frame)
-			gr.ready.disconnect(on_ready)
-			pending.remove(gr)
-		gr.ready.connect(on_ready)
 
-	timer = QTimer()
-	timer.timeout.connect(grab_and_send)
-	timer.start(int(1000/24))
+# --------------------------------------------------------------------------- #
+# Main application
+# --------------------------------------------------------------------------- #
+def main() -> None:
+    # --------------------------------------------------------------------- #
+    # Parse CLI arguments
+    # --------------------------------------------------------------------- #
+    parser = argparse.ArgumentParser(description="Virtual Basketball Scoreboard")
+    parser.add_argument(
+        "--mode", choices=("send", "receive"), default="send", help="Operating mode."
+    )
+    parser.add_argument(
+        "--host",
+        default="255.255.255.255",
+        help="Destination for 'send' mode, bind address for 'receive' mode.",
+    )
+    parser.add_argument("--port", type=int, default=54545, help="UDP port.")
+    args = parser.parse_args()
 
-	# Score update handler with debug, fouls, period, and clock logic
-	def handle_score_update(state):
-		print("[DEBUG] handle_score_update:", state)
-		def to_int(x, default=0):
-			try: return int(x)
-			except (TypeError, ValueError): return default
+    # --------------------------------------------------------------------- #
+    # Prepare networking
+    # --------------------------------------------------------------------- #
+    udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-		# Home score
-		h = to_int(state.get('home_score'))
-		basketballDigits.setProperty("homeHundredsDigit", (h // 100) % 10)
-		basketballDigits.setProperty("homeTensDigit",     (h // 10)  % 10)
-		basketballDigits.setProperty("homeOnesDigit",     h % 10)
+    dest_addr: tuple[str, int] | None = None
+    basketball_instance = None
 
-		# Visitor score
-		v = to_int(state.get('visitor_score'))
-		basketballDigits.setProperty("awayHundredsDigit", (v // 100) % 10)
-		basketballDigits.setProperty("awayTensDigit",     (v // 10)  % 10)
-		basketballDigits.setProperty("awayOnesDigit",     v % 10)
+    if args.mode == "send":
+        if args.host.endswith(".255") or args.host == "255.255.255.255":
+            udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        dest_addr = (args.host, args.port)
+    else:  # receive
+        bind_addr = args.host if args.host != "255.255.255.255" else "0.0.0.0"
+        try:
+            udp_sock.bind((bind_addr, args.port))
+            print(f"📡 Listening for scoreboard data on UDP {bind_addr}:{args.port}")
+        except OSError as e:
+            print(f"❌ Failed to bind UDP socket on {bind_addr}:{args.port}: {e}")
+            sys.exit(1)
 
-		# Shot clock
-		shot = to_int(state.get('shot'))
-		basketballDigits.setProperty("shotTensDigit",     (shot // 10) % 10)
-		basketballDigits.setProperty("shotOnesDigit",     shot % 10)
+    # --------------------------------------------------------------------- #
+    # Initialise Qt/QML scene
+    # --------------------------------------------------------------------- #
+    app = QGuiApplication(sys.argv)
 
-		# Team fouls
-		home_fouls = to_int(state.get('home_fouls'))
-		basketballDigits.setProperty("homeSmallTensDigit", (home_fouls // 10) % 10)
-		basketballDigits.setProperty("homeSmallOnesDigit", home_fouls % 10)
-		visitor_fouls = to_int(state.get('visitor_fouls'))
-		basketballDigits.setProperty("awaySmallTensDigit", (visitor_fouls // 10) % 10)
-		basketballDigits.setProperty("awaySmallOnesDigit", visitor_fouls % 10)
+    def on_quit():
+        """Signal threads to shut down and close resources."""
+        print("Shutting down...")
+        _shutdown_event.set()
 
-		# Period (always treat as string)
-		period_raw = state.get('period', '')
-		print(f"[DEBUG] raw period: {period_raw!r} ({type(period_raw)})")
-		period_str = str(period_raw)
-		print(f"[DEBUG] coerced period_str: {period_str!r} ({type(period_str)})")
-		period_num = 0
-		for ch in period_str:
-			if ch.isdigit():
-				period_num = int(ch)
-				break
-		basketballDigits.setProperty("periodDigit", period_num)
+        if basketball_instance:
+            print("Closing serial connection...")
+            try:
+                if callable(getattr(basketball_instance, "close", None)):
+                    basketball_instance.close()
+                    print("Called basketball.close()")
+                elif hasattr(basketball_instance, "serial") and callable(
+                    getattr(basketball_instance.serial, "close", None)
+                ):
+                    basketball_instance.serial.close()
+                    print("Called basketball.serial.close()")
+            except Exception as e:
+                print(f"Error while trying to close basketball connection: {e}")
 
-		# Game clock formatting
-		clock = state.get('clock', "0:00")
-		if '.' in clock:
-			# Fast clock: S.T
-			minuteTensItem.setProperty("visible", False)
-			minuteOnesItem.setProperty("visible", False)
-			secondTensItem.setProperty("visible", False)
-			secondOnesItem.setProperty("visible", False)
-			fastTensItem.setProperty("visible", True)
-			fastOnesItem.setProperty("visible", True)
-			fastTenthsItem.setProperty("visible", True)
-			parts = clock.split('.')
-			sec = to_int(parts[0])
-			tenths = to_int(parts[1][0] if len(parts) > 1 else 0)
-			basketballDigits.setProperty("fastTensDigit",   (sec // 10) % 10)
-			basketballDigits.setProperty("fastOnesDigit",    sec % 10)
-			basketballDigits.setProperty("fastTenthsDigit",  tenths)
-		elif ':' in clock:
-			# Standard clock: M:SS or MM:SS
-			fastTensItem.setProperty("visible", False)
-			fastOnesItem.setProperty("visible", False)
-			fastTenthsItem.setProperty("visible", False)
-			parts = clock.split(':')
-			m = parts[0]; s = parts[1] if len(parts) > 1 else '00'
-			if len(m) == 2:
-				minuteTensItem.setProperty("visible", True)
-				basketballDigits.setProperty("minuteTensDigit", to_int(m) // 10)
-			else:
-				minuteTensItem.setProperty("visible", False)
-			minuteOnesItem.setProperty("visible", True)
-			secondTensItem.setProperty("visible", True)
-			secondOnesItem.setProperty("visible", True)
-			basketballDigits.setProperty("minuteOnesDigit", to_int(m) % 10)
-			basketballDigits.setProperty("secondTensDigit",  to_int(s) // 10)
-			basketballDigits.setProperty("secondOnesDigit",  to_int(s) % 10)
-		else:
-			# Fallback: hide all clock elements
-			minuteTensItem.setProperty("visible", False)
-			minuteOnesItem.setProperty("visible", False)
-			secondTensItem.setProperty("visible", False)
-			secondOnesItem.setProperty("visible", False)
-			fastTensItem.setProperty("visible", False)
-			fastOnesItem.setProperty("visible", False)
-			fastTenthsItem.setProperty("visible", False)
+        udp_sock.close()
+        print("UDP socket closed.")
 
-	# Connect signal → handler and start reader
-	score_updater.updateScore.connect(handle_score_update)
-	port = find_prolific_port() or "/dev/cu.PL2303-00001014"
-	print(f"🔌 Opening scoreboard serial port: {port}")
-	basketball = Basketball(port)
-	basketball.on_update = score_updater.updateScore.emit
-	Thread(target=basketball.export, daemon=True).start()
+        # Failsafe: if the app hangs on exit, force quit after a delay.
+        QTimer.singleShot(1000, lambda: os._exit(0))
 
-	# Run and cleanup
-	exit_code = app.exec()
-	ndi.send_destroy(ndi_send)
-	ndi.destroy()
-	sys.exit(exit_code)
+    app.aboutToQuit.connect(on_quit)
+    app.setQuitOnLastWindowClosed(True)
+
+    engine = QQmlApplicationEngine()
+    engine.quit.connect(app.quit)
+    engine.load("main.qml")
+
+    if not engine.rootObjects():
+        print("❌ Failed to load QML")
+        sys.exit(1)
+
+    root = engine.rootObjects()[0]
+
+    # Expose properties to QML
+    root.setProperty("receiveMode", args.mode == "receive")
+    root.setProperty("localIpAddress", get_local_ip())
+
+    # --------------------------------------------------------------------- #
+    # Get QML objects
+    # --------------------------------------------------------------------- #
+    basketballDigits: QQuickItem | None = root.findChild(QQuickItem, "basketballDigits")
+    sourceIpInput: QQuickItem | None = root.findChild(QQuickItem, "sourceIpInput")
+    # ... (and all the other digit items)
+
+    # --------------------------------------------------------------------- #
+    # Signal handlers / slots (now running in the main GUI thread)
+    # --------------------------------------------------------------------- #
+    score_updater = ScoreUpdater()
+    score_updater.updateScore.connect(
+        lambda data: handle_score_update(data, basketballDigits)
+    )
+
+    @Slot(dict)
+    def handle_serial_data(data):
+        """Handles data from the serial port thread."""
+        if is_auto_mode():
+            score_updater.updateScore.emit(data)
+        if dest_addr and not _shutdown_event.is_set():
+            try:
+                udp_sock.sendto(json.dumps(data).encode(), dest_addr)
+            except OSError as e:
+                if not _shutdown_event.is_set():
+                    print(f"⚠️  Failed to send UDP packet: {e}")
+
+    @Slot(str, str)
+    def handle_udp_packet(payload_str, ip_addr):
+        """Handles packets from the UDP listener thread."""
+        if sourceIpInput:
+            target_ip = sourceIpInput.property("text")
+            if target_ip and ip_addr != target_ip:
+                return
+        try:
+            state = json.loads(payload_str)
+            if isinstance(state, dict) and is_auto_mode():
+                score_updater.updateScore.emit(state)
+        except json.JSONDecodeError:
+            print("⚠️  Received invalid JSON packet, ignoring.")
+
+    # --------------------------------------------------------------------- #
+    # Mode-specific worker threads
+    # --------------------------------------------------------------------- #
+    if args.mode == "send":
+        port = find_prolific_port() or "/dev/cu.PL2303-00001014"
+        print(f"🔌 Opening scoreboard serial port: {port}")
+        try:
+            basketball = Basketball(port)
+            basketball_instance = basketball
+            serial_manager = SerialDataManager()
+            basketball.on_update = serial_manager.data_received.emit
+            serial_manager.data_received.connect(handle_serial_data)
+            threading.Thread(target=basketball.export, daemon=True).start()
+        except Exception as e:
+            print(f"❌ Failed to open serial port {port}: {e}")
+            sys.exit(1)
+    else:  # receive
+        udp_manager = UdpDataManager()
+        udp_manager.packet_received.connect(handle_udp_packet)
+
+        def receive_loop():
+            udp_sock.settimeout(1.0)
+            while not _shutdown_event.is_set():
+                try:
+                    payload, addr = udp_sock.recvfrom(8192)
+                    udp_manager.packet_received.emit(payload.decode(), addr[0])
+                except socket.timeout:
+                    continue
+                except OSError:
+                    return
+
+        threading.Thread(target=receive_loop, daemon=True).start()
+
+    # --------------------------------------------------------------------- #
+    # Final setup and execution
+    # --------------------------------------------------------------------- #
+    QTimer.singleShot(
+        0,
+        lambda: root.findChild(QQuickItem, "minuteTensItem").setProperty(
+            "visible", False
+        ),
+    )
+    sys.exit(app.exec())
+
+
+def handle_score_update(state: dict, basketballDigits: QQuickItem):
+    """The actual GUI update logic."""
+    if not basketballDigits:
+        return
+
+    def to_int(val, default=0):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    root = basketballDigits.window()
+    if not root:
+        return
+
+    # Find clock items dynamically
+    minuteTensItem = root.findChild(QQuickItem, "minuteTens")
+    minuteOnesItem = root.findChild(QQuickItem, "minuteOnes")
+    secondTensItem = root.findChild(QQuickItem, "secondTens")
+    secondOnesItem = root.findChild(QQuickItem, "secondOnes")
+    fastTensItem = root.findChild(QQuickItem, "fastTens")
+    fastOnesItem = root.findChild(QQuickItem, "fastOnes")
+    fastTenthsItem = root.findChild(QQuickItem, "fastTenths")
+
+    # Home score
+    h = to_int(state.get("home_score"))
+    basketballDigits.setProperty("homeHundredsDigit", (h // 100) % 10)
+    basketballDigits.setProperty("homeTensDigit", (h // 10) % 10)
+    basketballDigits.setProperty("homeOnesDigit", h % 10)
+
+    # Visitor score
+    v = to_int(state.get("visitor_score"))
+    basketballDigits.setProperty("awayHundredsDigit", (v // 100) % 10)
+    basketballDigits.setProperty("awayTensDigit", (v // 10) % 10)
+    basketballDigits.setProperty("awayOnesDigit", v % 10)
+
+    # Shot clock
+    shot = to_int(state.get("shot"))
+    basketballDigits.setProperty("shotTensDigit", (shot // 10) % 10)
+    basketballDigits.setProperty("shotOnesDigit", shot % 10)
+
+    # Team fouls
+    home_fouls = to_int(state.get("home_fouls"))
+    basketballDigits.setProperty("homeSmallTensDigit", (home_fouls // 10) % 10)
+    basketballDigits.setProperty("homeSmallOnesDigit", home_fouls % 10)
+
+    visitor_fouls = to_int(state.get("visitor_fouls"))
+    basketballDigits.setProperty("awaySmallTensDigit", (visitor_fouls // 10) % 10)
+    basketballDigits.setProperty("awaySmallOnesDigit", visitor_fouls % 10)
+
+    # Period
+    period_str = str(state.get("period", ""))
+    period_num = next((int(ch) for ch in period_str if ch.isdigit()), 0)
+    basketballDigits.setProperty("periodDigit", period_num)
+
+    # Clock
+    clock = state.get("clock", "0:00")
+    clock_items = [
+        minuteTensItem,
+        minuteOnesItem,
+        secondTensItem,
+        secondOnesItem,
+        fastTensItem,
+        fastOnesItem,
+        fastTenthsItem,
+    ]
+    if all(clock_items):
+        if "." in clock:
+            for item in (
+                minuteTensItem,
+                minuteOnesItem,
+                secondTensItem,
+                secondOnesItem,
+            ):
+                item.setProperty("visible", False)
+            for item in (fastTensItem, fastOnesItem, fastTenthsItem):
+                item.setProperty("visible", True)
+            sec_part, tenths_part = clock.split(".", maxsplit=1)
+            sec = to_int(sec_part)
+            tenths = to_int(tenths_part[:1] if tenths_part else 0)
+            basketballDigits.setProperty("fastTensDigit", (sec // 10) % 10)
+            basketballDigits.setProperty("fastOnesDigit", sec % 10)
+            basketballDigits.setProperty("fastTenthsDigit", tenths)
+        elif ":" in clock:
+            for item in (fastTensItem, fastOnesItem, fastTenthsItem):
+                item.setProperty("visible", False)
+            for item in (minuteOnesItem, secondTensItem, secondOnesItem):
+                item.setProperty("visible", True)
+            minutes, seconds = clock.split(":", maxsplit=1)
+            seconds = seconds.zfill(2)
+            if len(minutes) == 2:
+                minuteTensItem.setProperty("visible", True)
+                basketballDigits.setProperty("minuteTensDigit", to_int(minutes[0]))
+            else:
+                minuteTensItem.setProperty("visible", False)
+            basketballDigits.setProperty("minuteOnesDigit", to_int(minutes[-1]))
+            basketballDigits.setProperty("secondTensDigit", to_int(seconds[0]))
+            basketballDigits.setProperty("secondOnesDigit", to_int(seconds[1]))
+
 
 if __name__ == "__main__":
-	main()
+    main()
