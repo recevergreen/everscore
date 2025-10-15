@@ -48,10 +48,14 @@ def is_auto_mode() -> bool:
             return True
         root_obj: QObject = windows[0]
         sw: QObject | None = root_obj.findChild(QObject, "manualSwitch")
-        if sw is not None:
-            return not bool(sw.property("checked"))
-    except Exception:
-        pass  # Fallback on any error
+        if sw is None:
+            print(
+                "⚠️  is_auto_mode: Could not find 'manualSwitch' in QML. Defaulting to True (automatic mode)."
+            )
+            return True
+        return not bool(sw.property("checked"))
+    except Exception as e:
+        print(f"❌ Error in is_auto_mode: {e}")
     return True  # Safest default
 
 
@@ -65,11 +69,15 @@ def is_send_mode() -> bool:
         if not windows:
             return False
         root_obj: QObject = windows[0]
-        sw: QObject | None = root_obj.findChild(QObject, "sendSwitch")
-        if sw is not None:
-            return bool(sw.property("checked"))
-    except Exception:
-        pass
+        sw: QObject | None = root_obj.findChild(QObject, "modeSwitch")
+        if sw is None:
+            print(
+                "⚠️  is_send_mode: Could not find 'modeSwitch' in QML. Defaulting to False (receive mode)."
+            )
+            return False
+        return bool(sw.property("checked"))
+    except Exception as e:
+        print(f"❌ Error in is_send_mode: {e}")
     return False
 
 
