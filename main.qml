@@ -658,11 +658,19 @@ Window {
                 }
 
                 onClockTimeInSecondsChanged: {
-                    basketballDigits.minuteTensDigit = Math.floor(controlPanel.clockCurrentMinutes / 10) % 10;
-                    basketballDigits.minuteOnesDigit = controlPanel.clockCurrentMinutes % 10;
-                    basketballDigits.secondTensDigit = Math.floor(controlPanel.clockCurrentSeconds / 10) % 10;
-                    basketballDigits.secondOnesDigit = controlPanel.clockCurrentSeconds % 10;
+                    var minutes = controlPanel.clockCurrentMinutes;
+                    var seconds = controlPanel.clockCurrentSeconds;
+
+                    // Update scoreboard
+                    basketballDigits.minuteTensDigit = Math.floor(minutes / 10) % 10;
+                    basketballDigits.minuteOnesDigit = minutes % 10;
+                    basketballDigits.secondTensDigit = Math.floor(seconds / 10) % 10;
+                    basketballDigits.secondOnesDigit = seconds % 10;
                     appController.sendManualUpdate();
+
+                    // Update UI
+                    clockMinutesInput.text = minutes.toString().padStart(2, '0');
+                    clockSecondsInput.text = seconds.toString().padStart(2, '0');
                 }
 
                 function setScoreDigits(team, value) {
@@ -756,7 +764,7 @@ Window {
                                         bottom: 0
                                         top: 99
                                     }
-                                    text: controlPanel.clockCurrentMinutes.toString().padStart(2, '0')
+                                    text: "00"
                                     enabled: !controlPanel.clockRunning
                                     onEditingFinished: {
                                         controlPanel.clockTimeInSeconds = parseInt(text) * 60 + parseInt(clockSecondsInput.text);
@@ -773,7 +781,7 @@ Window {
                                         bottom: 0
                                         top: 59
                                     }
-                                    text: controlPanel.clockCurrentSeconds.toString().padStart(2, '0')
+                                    text: "00"
                                     enabled: !controlPanel.clockRunning
                                     onEditingFinished: {
                                         controlPanel.clockTimeInSeconds = parseInt(clockMinutesInput.text) * 60 + parseInt(text);
