@@ -627,6 +627,44 @@ Window {
                 property int homeFouls: 0
                 property int visitorFouls: 0
 
+                property int clockTimeInSeconds: 0
+                property bool clockRunning: false
+
+                // Read-only properties for display
+                readonly property int clockCurrentMinutes: Math.floor(controlPanel.clockTimeInSeconds / 60)
+                readonly property int clockCurrentSeconds: controlPanel.clockTimeInSeconds % 60
+
+                Timer {
+                    id: clockTimer
+                    interval: 1000
+                    repeat: true
+                    running: controlPanel.clockRunning
+                    onTriggered: {
+                        if (countDownSwitch.checked) {
+                            if (controlPanel.clockTimeInSeconds > 0) {
+                                controlPanel.clockTimeInSeconds--;
+                            } else {
+                                controlPanel.clockRunning = false;
+                            }
+                        } else {
+                            // Cap counting up at 99:59
+                            if (controlPanel.clockTimeInSeconds < 5999) {
+                                controlPanel.clockTimeInSeconds++;
+                            } else {
+                                controlPanel.clockRunning = false;
+                            }
+                        }
+                    }
+                }
+
+                onClockTimeInSecondsChanged: {
+                    basketballDigits.minuteTensDigit = Math.floor(controlPanel.clockCurrentMinutes / 10) % 10;
+                    basketballDigits.minuteOnesDigit = controlPanel.clockCurrentMinutes % 10;
+                    basketballDigits.secondTensDigit = Math.floor(controlPanel.clockCurrentSeconds / 10) % 10;
+                    basketballDigits.secondOnesDigit = controlPanel.clockCurrentSeconds % 10;
+                    appController.sendManualUpdate();
+                }
+
                 function setScoreDigits(team, value) {
                     if (value < 0)
                         value = 0;
@@ -696,6 +734,72 @@ Window {
                                     width: parent.width
                                     text: "10.20.67.92"
                                     placeholderText: "Leave empty to accept from any IP"
+                                }
+                            }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Clock"
+                        width: parent.width
+                        visible: manualSwitch.checked
+
+                        Column {
+                            spacing: 8
+                            Row {
+                                spacing: 8
+                                TextField {
+                                    id: clockMinutesInput
+                                    width: 60
+                                    placeholderText: "MM"
+                                    validator: IntValidator {
+                                        bottom: 0
+                                        top: 99
+                                    }
+                                    text: controlPanel.clockCurrentMinutes.toString().padStart(2, '0')
+                                    enabled: !controlPanel.clockRunning
+                                    onEditingFinished: {
+                                        controlPanel.clockTimeInSeconds = parseInt(text) * 60 + parseInt(clockSecondsInput.text);
+                                    }
+                                }
+                                Label {
+                                    text: ":"
+                                }
+                                TextField {
+                                    id: clockSecondsInput
+                                    width: 60
+                                    placeholderText: "SS"
+                                    validator: IntValidator {
+                                        bottom: 0
+                                        top: 59
+                                    }
+                                    text: controlPanel.clockCurrentSeconds.toString().padStart(2, '0')
+                                    enabled: !controlPanel.clockRunning
+                                    onEditingFinished: {
+                                        controlPanel.clockTimeInSeconds = parseInt(clockMinutesInput.text) * 60 + parseInt(text);
+                                    }
+                                }
+                                Button {
+                                    id: startStopButton
+                                    text: controlPanel.clockRunning ? "Stop" : "Start"
+                                    onClicked: {
+                                        if (!controlPanel.clockRunning) {
+                                            // When starting, make sure clockTimeInSeconds is up to date
+                                            controlPanel.clockTimeInSeconds = parseInt(clockMinutesInput.text) * 60 + parseInt(clockSecondsInput.text);
+                                        }
+                                        controlPanel.clockRunning = !controlPanel.clockRunning;
+                                    }
+                                }
+                            }
+                            Row {
+                                spacing: 8
+                                Switch {
+                                    id: countDownSwitch
+                                    checked: true // Default to count down
+                                    enabled: !controlPanel.clockRunning
+                                }
+                                Label {
+                                    text: countDownSwitch.checked ? "Counting Down" : "Counting Up"
                                 }
                             }
                         }
