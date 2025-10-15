@@ -164,9 +164,12 @@ def main() -> None:
     send_thread = None
 
     if args.mode == "send":
-        if args.host.endswith(".255") or args.host == "255.255.255.255":
+        send_host = args.host
+        if send_host.endswith(".255") or send_host == "255.255.255.255":
             udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        dest_addr = (args.host, args.port)
+            if send_host == "255.255.255.255":
+                send_host = "<broadcast>"
+        dest_addr = (send_host, args.port)
     else:  # receive
         bind_addr = args.host if args.host != "255.255.255.255" else "0.0.0.0"
         try:
