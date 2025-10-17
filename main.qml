@@ -552,6 +552,16 @@ Window {
                         source: "media/coverfouls.png"
                         visible: !showFoulsSwitch.checked
                     }
+
+                    Image {
+                        id: speedyKickImage
+                        x: 491
+                        y: 720
+                        width: 423
+                        height: 322
+                        source: "media/speedykick.png"
+                        visible: !shotClockSwitch.checked
+                    }
                 }
             }
         }
