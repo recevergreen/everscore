@@ -542,6 +542,16 @@ Window {
                             sourceClipRect: Qt.rect(0, height * basketballDigits.shotOnesDigit, width, height)
                         }
                     }
+
+                    Image {
+                        id: coverFoulsImage
+                        x: 1695
+                        y: 0
+                        width: 225
+                        height: 687
+                        source: "media/coverfouls.png"
+                        visible: !showFoulsSwitch.checked
+                    }
                 }
             }
         }
@@ -927,9 +937,10 @@ Window {
                         }
 
                         GroupBox {
+                            id: homeFoulsBox
                             title: "Home Fouls"
                             Layout.fillWidth: true
-                            visible: manualSwitch.checked
+                            visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 spacing: 4
                                 Row {
@@ -960,9 +971,10 @@ Window {
                         }
 
                         GroupBox {
+                            id: visitorFoulsBox
                             title: "Visitor Fouls"
                             Layout.fillWidth: true
-                            visible: manualSwitch.checked
+                            visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 spacing: 4
                                 Row {
@@ -1054,6 +1066,17 @@ Window {
                         }
                         Label {
                             text: "Show Shot Clock"
+                            font.pixelSize: 18
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Switch {
+                            id: showFoulsSwitch
+                            checked: true // Default to show
+                        }
+                        Label {
+                            text: "Show Fouls"
                             font.pixelSize: 18
                         }
                     }
