@@ -512,7 +512,7 @@ Window {
                     Item {
                         id: shotTens
                         objectName: "shotTens"
-                        visible: true
+                        visible: shotClockSwitch.checked
                         x: 524
                         y: 763
                         width: 185
@@ -529,7 +529,7 @@ Window {
                     Item {
                         id: shotOnes
                         objectName: "shotOnes"
-                        visible: true
+                        visible: shotClockSwitch.checked
                         x: 712
                         y: 767
                         width: 176
@@ -636,6 +636,7 @@ Window {
                 property int visitorScore: 0
                 property int homeFouls: 0
                 property int visitorFouls: 0
+                property int period: 1
 
                 property int clockTimeInTenths: 0
                 property bool clockRunning: false
@@ -736,6 +737,15 @@ Window {
                         basketballDigits.awaySmallOnesDigit = value % 10;
                         visitorFouls = value;
                     }
+                }
+
+                function setPeriodDigit(value) {
+                    if (value < 0)
+                        value = 0;
+                    if (value > 9)
+                        value = 9;
+                    basketballDigits.periodDigit = value;
+                    controlPanel.period = value;
                 }
 
                 Column {
@@ -844,149 +854,174 @@ Window {
                         }
                     }
 
-                    GroupBox {
-                        title: "Home Score"
+                    GridLayout {
+                        columns: 2
                         width: parent.width
-                        visible: manualSwitch.checked
-                        Column {
-                            spacing: 4
-                            Row {
+                        columnSpacing: 16
+                        rowSpacing: 16
+
+                        GroupBox {
+                            title: "Home Score"
+                            Layout.fillWidth: true
+                            visible: manualSwitch.checked
+                            Column {
                                 spacing: 4
-                                Button {
-                                    text: "▲"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
-                                        appController.sendManualUpdate();
+                                Row {
+                                    spacing: 4
+                                    Button {
+                                        text: "▲"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "▼"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "▼"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "⟲"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("home", 0);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "⟲"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("home", 0);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Label {
-                                    text: controlPanel.homeScore
-                                    font.pixelSize: 18
                                 }
                             }
                         }
-                    }
 
-                    GroupBox {
-                        title: "Visitor Score"
-                        width: parent.width
-                        visible: manualSwitch.checked
-                        Column {
-                            spacing: 4
-                            Row {
+                        GroupBox {
+                            title: "Visitor Score"
+                            Layout.fillWidth: true
+                            visible: manualSwitch.checked
+                            Column {
                                 spacing: 4
-                                Button {
-                                    text: "▲"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
-                                        appController.sendManualUpdate();
+                                Row {
+                                    spacing: 4
+                                    Button {
+                                        text: "▲"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "▼"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "▼"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "⟲"
-                                    onClicked: {
-                                        controlPanel.setScoreDigits("visitor", 0);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "⟲"
+                                        onClicked: {
+                                            controlPanel.setScoreDigits("visitor", 0);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Label {
-                                    text: controlPanel.visitorScore
-                                    font.pixelSize: 18
                                 }
                             }
                         }
-                    }
 
-                    GroupBox {
-                        title: "Home Fouls"
-                        width: parent.width
-                        visible: manualSwitch.checked
-                        Column {
-                            spacing: 4
-                            Row {
+                        GroupBox {
+                            title: "Home Fouls"
+                            Layout.fillWidth: true
+                            visible: manualSwitch.checked
+                            Column {
                                 spacing: 4
-                                Button {
-                                    text: "▲"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
-                                        appController.sendManualUpdate();
+                                Row {
+                                    spacing: 4
+                                    Button {
+                                        text: "▲"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "▼"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "▼"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "⟲"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("home", 0);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "⟲"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("home", 0);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Label {
-                                    text: controlPanel.homeFouls
-                                    font.pixelSize: 18
                                 }
                             }
                         }
-                    }
 
-                    GroupBox {
-                        title: "Visitor Fouls"
-                        width: parent.width
-                        visible: manualSwitch.checked
-                        Column {
-                            spacing: 4
-                            Row {
+                        GroupBox {
+                            title: "Visitor Fouls"
+                            Layout.fillWidth: true
+                            visible: manualSwitch.checked
+                            Column {
                                 spacing: 4
-                                Button {
-                                    text: "▲"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
-                                        appController.sendManualUpdate();
+                                Row {
+                                    spacing: 4
+                                    Button {
+                                        text: "▲"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
+                                            appController.sendManualUpdate();
+                                        }
+                                    }
+                                    Button {
+                                        text: "▼"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
+                                            appController.sendManualUpdate();
+                                        }
+                                    }
+                                    Button {
+                                        text: "⟲"
+                                        onClicked: {
+                                            controlPanel.setFoulDigits("visitor", 0);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
                                 }
-                                Button {
-                                    text: "▼"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
-                                        appController.sendManualUpdate();
+                            }
+                        }
+
+                        GroupBox {
+                            title: "Period"
+                            Layout.fillWidth: true
+                            Layout.columnSpan: 2
+                            visible: manualSwitch.checked
+                            Column {
+                                spacing: 4
+                                Row {
+                                    spacing: 4
+                                    Button {
+                                        text: "▲"
+                                        onClicked: {
+                                            controlPanel.setPeriodDigit(controlPanel.period + 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Button {
-                                    text: "⟲"
-                                    onClicked: {
-                                        controlPanel.setFoulDigits("visitor", 0);
-                                        appController.sendManualUpdate();
+                                    Button {
+                                        text: "▼"
+                                        onClicked: {
+                                            controlPanel.setPeriodDigit(controlPanel.period - 1);
+                                            appController.sendManualUpdate();
+                                        }
                                     }
-                                }
-                                Label {
-                                    text: controlPanel.visitorFouls
-                                    font.pixelSize: 18
+                                    Button {
+                                        text: "⟲"
+                                        onClicked: {
+                                            controlPanel.setPeriodDigit(1);
+                                            appController.sendManualUpdate();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -998,14 +1033,28 @@ Window {
                     spacing: 16
                     visible: settingsButton.checked
 
-                    Label {
-                        text: "Opponent Color"
-                        font.pixelSize: 18
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Opponent Color"
+                            font.pixelSize: 18
+                        }
+                        Button {
+                            text: "Select"
+                            onClicked: {
+                                colorDialog.open();
+                            }
+                        }
                     }
-                    Button {
-                        text: "Select"
-                        onClicked: {
-                            colorDialog.open();
+                    Row {
+                        spacing: 8
+                        Switch {
+                            id: shotClockSwitch
+                            checked: true // Default to show
+                        }
+                        Label {
+                            text: "Show Shot Clock"
+                            font.pixelSize: 18
                         }
                     }
                 }
