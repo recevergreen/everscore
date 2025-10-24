@@ -41,6 +41,14 @@ Window {
         }
     }
 
+    FileDialog {
+        id: opponentLogoDialog
+        title: "Select Opponent Logo"
+        onAccepted: {
+            opponentLogo.source = opponentLogoDialog.selectedFile;
+        }
+    }
+
     // animate any change to `lockedWidth`
     Behavior on lockedWidth {
         NumberAnimation {
@@ -141,6 +149,17 @@ Window {
                     property int secondOnesDigit: 0
                     property int shotTensDigit: 0
                     property int shotOnesDigit: 0
+
+                    Image {
+                        id: opponentLogo
+                        x: 38
+                        y: 363
+                        width: 1048
+                        height: 324
+                        source: ""
+                        fillMode: Image.PreserveAspectFit
+                        opacity: 0.5
+                    }
 
                     Rectangle {
                         id: opponentColorOverlay
@@ -1065,6 +1084,19 @@ Window {
                             text: "Select"
                             onClicked: {
                                 colorDialog.open();
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Opponent Logo"
+                            font.pixelSize: 18
+                        }
+                        Button {
+                            text: "Select"
+                            onClicked: {
+                                opponentLogoDialog.open();
                             }
                         }
                     }
