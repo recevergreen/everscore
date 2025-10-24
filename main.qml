@@ -24,6 +24,7 @@ Window {
     property int xanimationduration: 0
     property bool receiveMode: false
     property string localIpAddress: "127.0.0.1"
+    property string currentFontFamily: ""
 
     onClosing: {
         // Call the Python slot to arm the failsafe timer
@@ -54,6 +55,25 @@ Window {
         title: "Select Home Logo"
         onAccepted: {
             homeLogo.source = homeLogoDialog.selectedFile;
+        }
+    }
+
+    FontDialog {
+        id: fontDialog
+        title: "Select Font"
+        onAccepted: {
+            var newFont = fontDialog.selectedFont;
+            mainWindow.currentFontFamily = newFont.family;
+            homeNameText.font.family = newFont.family;
+            opponentNameText.font.family = newFont.family;
+
+            if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
+                homeNameText.text = homeNameInput.text.toLowerCase();
+                opponentNameText.text = opponentNameInput.text.toLowerCase();
+            } else {
+                homeNameText.text = homeNameInput.text;
+                opponentNameText.text = opponentNameInput.text;
+            }
         }
     }
 
@@ -600,6 +620,48 @@ Window {
                         source: "media/speedykick.png"
                         visible: !shotClockSwitch.checked
                     }
+
+                    Item {
+                        x: 38
+                        y: 29
+                        width: 1051
+                        height: 319
+                        Text {
+                            id: homeNameText
+                            text: ""
+                            anchors.fill: parent
+                            anchors.leftMargin: 50
+                            anchors.rightMargin: 50
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            font.bold: true
+                            color: "white"
+                            fontSizeMode: Text.Fit
+                            minimumPixelSize: 10
+                            font.pixelSize: 200
+                        }
+                    }
+
+                    Item {
+                        x: 38
+                        y: 363
+                        width: 1048
+                        height: 324
+                        Text {
+                            id: opponentNameText
+                            text: ""
+                            anchors.fill: parent
+                            anchors.leftMargin: 50
+                            anchors.rightMargin: 50
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            font.bold: true
+                            color: "white"
+                            fontSizeMode: Text.Fit
+                            minimumPixelSize: 10
+                            font.pixelSize: 200
+                        }
+                    }
                 }
             }
         }
@@ -1129,6 +1191,55 @@ Window {
                             text: "Select"
                             onClicked: {
                                 homeLogoDialog.open();
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Home Name"
+                            font.pixelSize: 18
+                        }
+                        TextField {
+                            id: homeNameInput
+                            placeholderText: "Enter Home Name"
+                            onTextChanged: {
+                                if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
+                                    homeNameText.text = text.toLowerCase();
+                                } else {
+                                    homeNameText.text = text;
+                                }
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Opponent Name"
+                            font.pixelSize: 18
+                        }
+                        TextField {
+                            id: opponentNameInput
+                            placeholderText: "Enter Opponent Name"
+                            onTextChanged: {
+                                if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
+                                    opponentNameText.text = text.toLowerCase();
+                                } else {
+                                    opponentNameText.text = text;
+                                }
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Team Name Font"
+                            font.pixelSize: 18
+                        }
+                        Button {
+                            text: "Select"
+                            onClicked: {
+                                fontDialog.open();
                             }
                         }
                     }
