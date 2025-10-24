@@ -49,6 +49,14 @@ Window {
         }
     }
 
+    FileDialog {
+        id: homeLogoDialog
+        title: "Select Home Logo"
+        onAccepted: {
+            homeLogo.source = homeLogoDialog.selectedFile;
+        }
+    }
+
     // animate any change to `lockedWidth`
     Behavior on lockedWidth {
         NumberAnimation {
@@ -149,6 +157,17 @@ Window {
                     property int secondOnesDigit: 0
                     property int shotTensDigit: 0
                     property int shotOnesDigit: 0
+
+                    Image {
+                        id: homeLogo
+                        x: 38
+                        y: 29
+                        width: 1051
+                        height: 319
+                        source: ""
+                        fillMode: Image.PreserveAspectFit
+                        opacity: 0.5
+                    }
 
                     Image {
                         id: opponentLogo
@@ -1097,6 +1116,19 @@ Window {
                             text: "Select"
                             onClicked: {
                                 opponentLogoDialog.open();
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Label {
+                            text: "Home Logo"
+                            font.pixelSize: 18
+                        }
+                        Button {
+                            text: "Select"
+                            onClicked: {
+                                homeLogoDialog.open();
                             }
                         }
                     }
