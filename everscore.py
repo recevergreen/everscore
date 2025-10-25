@@ -421,14 +421,6 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
     if not root:
         return
 
-    minuteTensItem = root.findChild(QQuickItem, "minuteTens")
-    minuteOnesItem = root.findChild(QQuickItem, "minuteOnes")
-    secondTensItem = root.findChild(QQuickItem, "secondTens")
-    secondOnesItem = root.findChild(QQuickItem, "secondOnes")
-    fastTensItem = root.findChild(QQuickItem, "fastTens")
-    fastOnesItem = root.findChild(QQuickItem, "fastOnes")
-    fastTenthsItem = root.findChild(QQuickItem, "fastTenths")
-
     h = to_int(state.get("home_score"))
     basketballDigits.setProperty("homeHundredsDigit", (h // 100) % 10)
     basketballDigits.setProperty("homeTensDigit", (h // 10) % 10)
@@ -456,48 +448,22 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
     basketballDigits.setProperty("periodDigit", period_num)
 
     clock = state.get("clock", "0:00")
-    clock_items = [
-        minuteTensItem,
-        minuteOnesItem,
-        secondTensItem,
-        secondOnesItem,
-        fastTensItem,
-        fastOnesItem,
-        fastTenthsItem,
-    ]
+    controlPanel = root.findChild(QObject, "controlPanel")
 
-    if all(i is not None for i in clock_items):
+    if controlPanel:
+        new_clock_time_in_tenths = 0
         if "." in clock:
-            for item in (
-                minuteTensItem,
-                minuteOnesItem,
-                secondTensItem,
-                secondOnesItem,
-            ):
-                item.setProperty("visible", False)
-            for item in (fastTensItem, fastOnesItem, fastTenthsItem):
-                item.setProperty("visible", True)
-            sec_part, tenths_part = clock.split(".", maxsplit=1)
-            sec = to_int(sec_part)
-            tenths = to_int(tenths_part[:1] if tenths_part else 0)
-            basketballDigits.setProperty("fastTensDigit", (sec // 10) % 10)
-            basketballDigits.setProperty("fastOnesDigit", sec % 10)
-            basketballDigits.setProperty("fastTenthsDigit", tenths)
+            parts = clock.split(".", 1)
+            sec = to_int(parts[0])
+            tenths = to_int(parts[1][:1]) if len(parts) > 1 and parts[1] else 0
+            new_clock_time_in_tenths = sec * 10 + tenths
         elif ":" in clock:
-            for item in (fastTensItem, fastOnesItem, fastTenthsItem):
-                item.setProperty("visible", False)
-            for item in (minuteOnesItem, secondTensItem, secondOnesItem):
-                item.setProperty("visible", True)
-            minutes, seconds = clock.split(":", maxsplit=1)
-            seconds = seconds.zfill(2)
-            if len(minutes) == 2:
-                minuteTensItem.setProperty("visible", True)
-                basketballDigits.setProperty("minuteTensDigit", to_int(minutes[0]))
-            else:
-                minuteTensItem.setProperty("visible", False)
-            basketballDigits.setProperty("minuteOnesDigit", to_int(minutes[-1]))
-            basketballDigits.setProperty("secondTensDigit", to_int(seconds[0]))
-            basketballDigits.setProperty("secondOnesDigit", to_int(seconds[1]))
+            parts = clock.split(":", 1)
+            minutes = to_int(parts[0])
+            seconds = to_int(parts[1]) if len(parts) > 1 else 0
+            new_clock_time_in_tenths = (minutes * 60 + seconds) * 10
+
+        controlPanel.setProperty("clockTimeInTenths", new_clock_time_in_tenths)
 
 
 if __name__ == "__main__":

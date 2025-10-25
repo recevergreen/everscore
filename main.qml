@@ -748,6 +748,7 @@ Window {
 
             Column {
                 id: controlPanel
+                objectName: "controlPanel"
                 anchors.fill: parent
                 anchors.margins: 16
                 spacing: 16
