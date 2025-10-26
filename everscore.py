@@ -463,6 +463,13 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
             seconds = to_int(parts[1]) if len(parts) > 1 else 0
             new_clock_time_in_tenths = (minutes * 60 + seconds) * 10
 
+        if is_auto_mode() and is_send_mode():
+            new_clock_time_in_tenths -= 1
+
+        # Ensure clock doesn't go negative
+        if new_clock_time_in_tenths < 0:
+            new_clock_time_in_tenths = 0
+
         controlPanel.setProperty("clockTimeInTenths", new_clock_time_in_tenths)
 
 
