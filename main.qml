@@ -223,11 +223,11 @@ Window {
                     // single-frame PNG: no clipping needed
                     Item {
                         id: awayHundreds
+                        opacity: 0
                         x: 1089
                         y: 361
                         width: 161
                         height: 325
-                        visible: basketballDigits.awayHundredsDigit === 1
 
                         Image {
                             source: "media/awayHundreds.png"
@@ -240,6 +240,7 @@ Window {
                     Item {
                         id: awayTens
                         objectName: "awayTens"
+                        opacity: 0
                         x: 1263
                         y: 361
                         width: 200
@@ -272,6 +273,7 @@ Window {
                     Item {
                         id: awaySmallTens
                         objectName: "awaySmallTens"
+                        opacity: 0
                         x: 1695
                         y: 361
                         width: 114
@@ -355,11 +357,11 @@ Window {
                     Item {
                         id: homeHundreds
                         objectName: "homeHundreds"
+                        opacity: 0
                         x: 1089
                         y: 20
                         width: 177
                         height: 324
-                        visible: basketballDigits.homeHundredsDigit === 1
 
                         Image {
                             source: "media/homeHundreds.png"
@@ -371,6 +373,7 @@ Window {
                     Item {
                         id: homeTens
                         objectName: "homeTens"
+                        opacity: 0
                         x: 1260
                         y: 20
                         width: 201
@@ -403,6 +406,7 @@ Window {
                     Item {
                         id: homeSmallTens
                         objectName: "homeSmallTens"
+                        opacity: 0
                         x: 1697
                         y: 21
                         width: 115
@@ -832,11 +836,15 @@ Window {
                     if (value > 999)
                         value = 999;
                     if (team === "home") {
+                        homeHundreds.opacity = value >= 100 ? 1 : 0;
+                        homeTens.opacity = value >= 10 ? 1 : 0;
                         basketballDigits.homeHundredsDigit = Math.floor(value / 100) % 10;
                         basketballDigits.homeTensDigit = Math.floor(value / 10) % 10;
                         basketballDigits.homeOnesDigit = value % 10;
                         homeScore = value;
                     } else {
+                        awayHundreds.opacity = value >= 100 ? 1 : 0;
+                        awayTens.opacity = value >= 10 ? 1 : 0;
                         basketballDigits.awayHundredsDigit = Math.floor(value / 100) % 10;
                         basketballDigits.awayTensDigit = Math.floor(value / 10) % 10;
                         basketballDigits.awayOnesDigit = value % 10;
@@ -850,10 +858,12 @@ Window {
                     if (value > 99)
                         value = 99;
                     if (team === "home") {
+                        homeSmallTens.opacity = value >= 10 ? 1 : 0;
                         basketballDigits.homeSmallTensDigit = Math.floor(value / 10) % 10;
                         basketballDigits.homeSmallOnesDigit = value % 10;
                         homeFouls = value;
                     } else {
+                        awaySmallTens.opacity = value >= 10 ? 1 : 0;
                         basketballDigits.awaySmallTensDigit = Math.floor(value / 10) % 10;
                         basketballDigits.awaySmallOnesDigit = value % 10;
                         visitorFouls = value;

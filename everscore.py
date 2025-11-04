@@ -421,34 +421,31 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
     if not root:
         return
 
+    controlPanel = root.findChild(QObject, "controlPanel")
+    if not controlPanel:
+        return
+
     h = to_int(state.get("home_score"))
-    basketballDigits.setProperty("homeHundredsDigit", (h // 100) % 10)
-    basketballDigits.setProperty("homeTensDigit", (h // 10) % 10)
-    basketballDigits.setProperty("homeOnesDigit", h % 10)
+    controlPanel.setScoreDigits("home", h)
 
     v = to_int(state.get("visitor_score"))
-    basketballDigits.setProperty("awayHundredsDigit", (v // 100) % 10)
-    basketballDigits.setProperty("awayTensDigit", (v // 10) % 10)
-    basketballDigits.setProperty("awayOnesDigit", v % 10)
+    controlPanel.setScoreDigits("visitor", v)
 
     shot = to_int(state.get("shot"))
     basketballDigits.setProperty("shotTensDigit", (shot // 10) % 10)
     basketballDigits.setProperty("shotOnesDigit", shot % 10)
 
     home_fouls = to_int(state.get("home_fouls"))
-    basketballDigits.setProperty("homeSmallTensDigit", (home_fouls // 10) % 10)
-    basketballDigits.setProperty("homeSmallOnesDigit", home_fouls % 10)
+    controlPanel.setFoulDigits("home", home_fouls)
 
     visitor_fouls = to_int(state.get("visitor_fouls"))
-    basketballDigits.setProperty("awaySmallTensDigit", (visitor_fouls // 10) % 10)
-    basketballDigits.setProperty("awaySmallOnesDigit", visitor_fouls % 10)
+    controlPanel.setFoulDigits("visitor", visitor_fouls)
 
     period_str = str(state.get("period", ""))
     period_num = next((int(ch) for ch in period_str if ch.isdigit()), 0)
     basketballDigits.setProperty("periodDigit", period_num)
 
     clock = state.get("clock", "0:00")
-    controlPanel = root.findChild(QObject, "controlPanel")
 
     if controlPanel:
         new_clock_time_in_tenths = 0
