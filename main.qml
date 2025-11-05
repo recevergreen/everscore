@@ -640,9 +640,11 @@ Window {
                             horizontalAlignment: Text.AlignHCenter
                             font.bold: true
                             color: "white"
-                            fontSizeMode: Text.Fit
-                            minimumPixelSize: 10
                             font.pixelSize: 200
+                            minimumPixelSize: 10
+                            fontSizeMode: Text.Fit
+                            wrapMode: Text.WordWrap
+                            lineHeight: 0.8
                         }
                     }
 
@@ -661,9 +663,11 @@ Window {
                             horizontalAlignment: Text.AlignHCenter
                             font.bold: true
                             color: "white"
-                            fontSizeMode: Text.Fit
-                            minimumPixelSize: 10
                             font.pixelSize: 200
+                            minimumPixelSize: 10
+                            fontSizeMode: Text.Fit
+                            wrapMode: Text.WordWrap
+                            lineHeight: 0.8
                         }
                     }
                 }
