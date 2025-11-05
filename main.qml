@@ -137,7 +137,7 @@ Window {
                 Image {
                     id: background
                     anchors.fill: parent
-                    source: "file:media/basketballbg.png"
+                    source: backgroundSwitch.checked ? "file:media/volleyballbg.png" : "file:media/basketballbg.png"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1272,7 +1272,7 @@ Window {
                             checked: true // Default to show
                         }
                         Label {
-                            text: "Show Fouls"
+                            text: "Show Fouls/Sets"
                             font.pixelSize: 18
                         }
                     }
@@ -1284,6 +1284,17 @@ Window {
                         }
                         Label {
                             text: logoSwitch.checked ? "UEN Logo" : "Mascot Logo"
+                            font.pixelSize: 18
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Switch {
+                            id: backgroundSwitch
+                            checked: false // Default to Basketball
+                        }
+                        Label {
+                            text: backgroundSwitch.checked ? "Volleyball" : "Basketball"
                             font.pixelSize: 18
                         }
                     }
