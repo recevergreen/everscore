@@ -621,7 +621,7 @@ Window {
                         y: 720
                         width: 423
                         height: 322
-                        source: "media/speedykick.png"
+                        source: logoSwitch.checked ? "file:media/uenlogo.png" : "file:media/speedykick.png"
                         visible: !shotClockSwitch.checked
                     }
 
@@ -1273,6 +1273,17 @@ Window {
                         }
                         Label {
                             text: "Show Fouls"
+                            font.pixelSize: 18
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Switch {
+                            id: logoSwitch
+                            checked: false // Default to Mascot Logo
+                        }
+                        Label {
+                            text: logoSwitch.checked ? "UEN Logo" : "Mascot Logo"
                             font.pixelSize: 18
                         }
                     }
