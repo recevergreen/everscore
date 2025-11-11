@@ -24,7 +24,6 @@ Window {
     property int xanimationduration: 0
     property bool receiveMode: false
     property string localIpAddress: "127.0.0.1"
-    property string currentFontFamily: ""
 
     onClosing: {
         // Call the Python slot to arm the failsafe timer
@@ -34,10 +33,11 @@ Window {
     ColorDialog {
         id: colorDialog
         title: "Select Opponent Color"
+        selectedColor: appController.opponentColor
         onAccepted: {
             var newColor = colorDialog.selectedColor;
             if (newColor) {
-                opponentColorOverlay.color = newColor;
+                appController.opponentColor = newColor;
             }
         }
     }
@@ -46,7 +46,7 @@ Window {
         id: opponentLogoDialog
         title: "Select Opponent Logo"
         onAccepted: {
-            opponentLogo.source = opponentLogoDialog.selectedFile;
+            appController.opponentLogo = opponentLogoDialog.selectedFile;
         }
     }
 
@@ -54,7 +54,7 @@ Window {
         id: homeLogoDialog
         title: "Select Home Logo"
         onAccepted: {
-            homeLogo.source = homeLogoDialog.selectedFile;
+            appController.homeLogo = homeLogoDialog.selectedFile;
         }
     }
 
@@ -63,17 +63,7 @@ Window {
         title: "Select Font"
         onAccepted: {
             var newFont = fontDialog.selectedFont;
-            mainWindow.currentFontFamily = newFont.family;
-            homeNameText.font.family = newFont.family;
-            opponentNameText.font.family = newFont.family;
-
-            if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
-                homeNameText.text = homeNameInput.text.toLowerCase();
-                opponentNameText.text = opponentNameInput.text.toLowerCase();
-            } else {
-                homeNameText.text = homeNameInput.text;
-                opponentNameText.text = opponentNameInput.text;
-            }
+            appController.fontFamily = newFont.family;
         }
     }
 
@@ -184,7 +174,7 @@ Window {
                         y: 29
                         width: 1051
                         height: 319
-                        source: ""
+                        source: appController.homeLogo
                         fillMode: Image.PreserveAspectFit
                         opacity: 0.5
                     }
@@ -195,7 +185,7 @@ Window {
                         y: 363
                         width: 1048
                         height: 324
-                        source: ""
+                        source: appController.opponentLogo
                         fillMode: Image.PreserveAspectFit
                         opacity: 0.5
                     }
@@ -206,7 +196,7 @@ Window {
                         y: 363
                         width: 1048
                         height: 324
-                        color: "blue"
+                        color: appController.opponentColor
                         opacity: 0.5
                     }
 
@@ -632,7 +622,8 @@ Window {
                         height: 319
                         Text {
                             id: homeNameText
-                            text: ""
+                            text: appController.fontFamily.toLowerCase().includes("serpentine") ? appController.homeName.toLowerCase() : appController.homeName
+                            font.family: appController.fontFamily
                             anchors.fill: parent
                             anchors.leftMargin: 50
                             anchors.rightMargin: 50
@@ -655,7 +646,8 @@ Window {
                         height: 324
                         Text {
                             id: opponentNameText
-                            text: ""
+                            text: appController.fontFamily.toLowerCase().includes("serpentine") ? appController.opponentName.toLowerCase() : appController.opponentName
+                            font.family: appController.fontFamily
                             anchors.fill: parent
                             anchors.leftMargin: 50
                             anchors.rightMargin: 50
@@ -707,7 +699,8 @@ Window {
                             Switch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
-                                checked: false          // true = MANUAL, false = AUTOMATIC
+                                checked: appController.manualMode
+                                onCheckedChanged: appController.manualMode = checked
                             }
                             Label {
                                 id: modeText
@@ -729,8 +722,11 @@ Window {
                             Switch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
-                                checked: false          // true = SEND, false = RECEIVE
-                                onToggled: modeLabel.text = checked ? "Send" : "Receive"
+                                checked: appController.sendMode
+                                onToggled: {
+                                    appController.sendMode = checked;
+                                    modeLabel.text = checked ? "Send" : "Receive";
+                                }
                             }
                             Label {
                                 id: modeLabel
@@ -931,8 +927,9 @@ Window {
                                     id: sourceIpInput
                                     objectName: "sourceIpInput"
                                     width: parent.width
-                                    text: "10.20.67.92"
+                                    text: appController.sourceIp
                                     placeholderText: "Leave empty to accept from any IP"
+                                    onEditingFinished: appController.sourceIp = text
                                 }
                             }
                         }
@@ -1233,12 +1230,9 @@ Window {
                         TextField {
                             id: homeNameInput
                             placeholderText: "Enter Home Name"
+                            text: appController.homeName
                             onTextChanged: {
-                                if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
-                                    homeNameText.text = text.toLowerCase();
-                                } else {
-                                    homeNameText.text = text;
-                                }
+                                appController.homeName = text;
                             }
                         }
                     }
@@ -1251,12 +1245,9 @@ Window {
                         TextField {
                             id: opponentNameInput
                             placeholderText: "Enter Opponent Name"
+                            text: appController.opponentName
                             onTextChanged: {
-                                if (mainWindow.currentFontFamily.toLowerCase().includes("serpentine")) {
-                                    opponentNameText.text = text.toLowerCase();
-                                } else {
-                                    opponentNameText.text = text;
-                                }
+                                appController.opponentName = text;
                             }
                         }
                     }
@@ -1277,7 +1268,8 @@ Window {
                         spacing: 8
                         Switch {
                             id: shotClockSwitch
-                            checked: true // Default to show
+                            checked: appController.shotClock
+                            onCheckedChanged: appController.shotClock = checked
                         }
                         Label {
                             text: "Show Shot Clock"
@@ -1288,7 +1280,8 @@ Window {
                         spacing: 8
                         Switch {
                             id: showFoulsSwitch
-                            checked: true // Default to show
+                            checked: appController.showFouls
+                            onCheckedChanged: appController.showFouls = checked
                         }
                         Label {
                             text: "Show Fouls/Sets"
@@ -1299,7 +1292,8 @@ Window {
                         spacing: 8
                         Switch {
                             id: logoSwitch
-                            checked: false // Default to Mascot Logo
+                            checked: appController.logo
+                            onCheckedChanged: appController.logo = checked
                         }
                         Label {
                             text: logoSwitch.checked ? "UEN Logo" : "Mascot Logo"
@@ -1310,7 +1304,8 @@ Window {
                         spacing: 8
                         Switch {
                             id: backgroundSwitch
-                            checked: false // Default to Basketball
+                            checked: appController.background
+                            onCheckedChanged: appController.background = checked
                         }
                         Label {
                             text: backgroundSwitch.checked ? "Volleyball" : "Basketball"

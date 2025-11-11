@@ -20,10 +20,10 @@ from typing import Any
 
 import serial.tools.list_ports
 from consoles.sports import Basketball
-from PySide6.QtCore import QObject, QTimer, Signal, Slot
-from PySide6.QtGui import QGuiApplication, QCloseEvent
-from PySide6.QtQuick import QQuickItem
+from PySide6.QtCore import Property, QObject, QSettings, QTimer, Signal, Slot
+from PySide6.QtGui import QCloseEvent, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuick import QQuickItem
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
@@ -143,6 +143,153 @@ class AppController(QObject):
         super().__init__(parent)
         self._udp_sock = udp_sock
         self._dest_addr = dest_addr
+
+        self.settings = QSettings("The Evergreen State College", "everscore")
+
+    # --- Settings Properties ---
+
+    _opponentColorChanged = Signal()
+
+    @Property(str, notify=_opponentColorChanged)
+    def opponentColor(self):
+        return self.settings.value("opponentColor", "blue")
+
+    @opponentColor.setter
+    def opponentColor(self, value):
+        self.settings.setValue("opponentColor", value)
+        self._opponentColorChanged.emit()
+
+    _opponentLogoChanged = Signal()
+
+    @Property(str, notify=_opponentLogoChanged)
+    def opponentLogo(self):
+        return self.settings.value("opponentLogo", "")
+
+    @opponentLogo.setter
+    def opponentLogo(self, value):
+        self.settings.setValue("opponentLogo", value)
+        self._opponentLogoChanged.emit()
+
+    _homeLogoChanged = Signal()
+
+    @Property(str, notify=_homeLogoChanged)
+    def homeLogo(self):
+        return self.settings.value("homeLogo", "")
+
+    @homeLogo.setter
+    def homeLogo(self, value):
+        self.settings.setValue("homeLogo", value)
+        self._homeLogoChanged.emit()
+
+    _homeNameChanged = Signal()
+
+    @Property(str, notify=_homeNameChanged)
+    def homeName(self):
+        return self.settings.value("homeName", "HOME")
+
+    @homeName.setter
+    def homeName(self, value):
+        self.settings.setValue("homeName", value)
+        self._homeNameChanged.emit()
+
+    _opponentNameChanged = Signal()
+
+    @Property(str, notify=_opponentNameChanged)
+    def opponentName(self):
+        return self.settings.value("opponentName", "GUEST")
+
+    @opponentName.setter
+    def opponentName(self, value):
+        self.settings.setValue("opponentName", value)
+        self._opponentNameChanged.emit()
+
+    _fontFamilyChanged = Signal()
+
+    @Property(str, notify=_fontFamilyChanged)
+    def fontFamily(self):
+        return self.settings.value("fontFamily", "")
+
+    @fontFamily.setter
+    def fontFamily(self, value):
+        self.settings.setValue("fontFamily", value)
+        self._fontFamilyChanged.emit()
+
+    _shotClockChanged = Signal()
+
+    @Property(bool, notify=_shotClockChanged)
+    def shotClock(self):
+        return self.settings.value("shotClock", True, type=bool)
+
+    @shotClock.setter
+    def shotClock(self, value):
+        self.settings.setValue("shotClock", value)
+        self._shotClockChanged.emit()
+
+    _showFoulsChanged = Signal()
+
+    @Property(bool, notify=_showFoulsChanged)
+    def showFouls(self):
+        return self.settings.value("showFouls", True, type=bool)
+
+    @showFouls.setter
+    def showFouls(self, value):
+        self.settings.setValue("showFouls", value)
+        self._showFoulsChanged.emit()
+
+    _logoChanged = Signal()
+
+    @Property(bool, notify=_logoChanged)
+    def logo(self):
+        return self.settings.value("logo", False, type=bool)
+
+    @logo.setter
+    def logo(self, value):
+        self.settings.setValue("logo", value)
+        self._logoChanged.emit()
+
+    _backgroundChanged = Signal()
+
+    @Property(bool, notify=_backgroundChanged)
+    def background(self):
+        return self.settings.value("background", False, type=bool)
+
+    @background.setter
+    def background(self, value):
+        self.settings.setValue("background", value)
+        self._backgroundChanged.emit()
+
+    _manualModeChanged = Signal()
+
+    @Property(bool, notify=_manualModeChanged)
+    def manualMode(self):
+        return self.settings.value("manualMode", False, type=bool)
+
+    @manualMode.setter
+    def manualMode(self, value):
+        self.settings.setValue("manualMode", value)
+        self._manualModeChanged.emit()
+
+    _sendModeChanged = Signal()
+
+    @Property(bool, notify=_sendModeChanged)
+    def sendMode(self):
+        return self.settings.value("sendMode", False, type=bool)
+
+    @sendMode.setter
+    def sendMode(self, value):
+        self.settings.setValue("sendMode", value)
+        self._sendModeChanged.emit()
+
+    _sourceIpChanged = Signal()
+
+    @Property(str, notify=_sourceIpChanged)
+    def sourceIp(self):
+        return self.settings.value("sourceIp", "10.20.67.92")
+
+    @sourceIp.setter
+    def sourceIp(self, value):
+        self.settings.setValue("sourceIp", value)
+        self._sourceIpChanged.emit()
 
     @Slot()
     def prepareToQuit(self):
