@@ -206,7 +206,7 @@ Window {
                         y: 833
                         width: 65
                         height: 163
-                        source: controlPanel.isFastClockActive ? "file:media/decimalpoint.png" : "file:media/colon.png"
+                        source: controlPanel.isFastClockActive ? "file://" + mediaPath + "/decimalpoint.png" : "file://" + mediaPath + "/colon.png"
                         visible: controlPanel.clockTimeInTenths > 0
                     }
 
