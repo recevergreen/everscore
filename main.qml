@@ -700,7 +700,7 @@ Window {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
                                 checked: appController.manualMode
-                                onCheckedChanged: appController.manualMode = checked
+                                onToggled: appController.manualMode = checked
                             }
                             Label {
                                 id: modeText
@@ -1231,7 +1231,7 @@ Window {
                             id: homeNameInput
                             placeholderText: "Enter Home Name"
                             text: appController.homeName
-                            onTextChanged: {
+                            onEditingFinished: {
                                 appController.homeName = text;
                             }
                         }
@@ -1246,7 +1246,7 @@ Window {
                             id: opponentNameInput
                             placeholderText: "Enter Opponent Name"
                             text: appController.opponentName
-                            onTextChanged: {
+                            onEditingFinished: {
                                 appController.opponentName = text;
                             }
                         }
@@ -1269,7 +1269,7 @@ Window {
                         Switch {
                             id: shotClockSwitch
                             checked: appController.shotClock
-                            onCheckedChanged: appController.shotClock = checked
+                            onToggled: appController.shotClock = checked
                         }
                         Label {
                             text: "Show Shot Clock"
