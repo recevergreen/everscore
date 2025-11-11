@@ -66,5 +66,5 @@ app = BUNDLE(
     coll,
     name='everscore.app',
     icon='icon.icns',
-    bundle_identifier='com.everscore.everscore',
+    bundle_identifier='com.evergreen.everscore',
 )
