@@ -25,34 +25,6 @@ from PySide6.QtGui import QCloseEvent, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
 
-from pathlib import Path
-
-def app_base() -> Path:
-    """Folder that contains bundled resources (PyInstaller) or the source dir (dev)."""
-    if getattr(sys, "_MEIPASS", None):  # set by PyInstaller (onedir & onefile)
-        return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parent
-
-def rel_path(*parts) -> str:
-    """Convenience path -> str for Qt loaders."""
-    return str(app_base().joinpath(*parts))
-
-# Optional: sometimes Qt plugin paths need help when frozen
-def add_qt_plugin_paths():
-    try:
-        from PySide6.QtCore import QCoreApplication
-        base = app_base()
-        # Typical PyInstaller layout:
-        candidates = [
-            base / "PySide6" / "Qt" / "plugins",
-            base / "qt6_plugins",  # if you relocated with --collect-qt-plugins
-        ]
-        for p in candidates:
-            if p.exists():
-                QCoreApplication.addLibraryPath(str(p))
-    except Exception:
-        pass
-
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
 
@@ -459,22 +431,7 @@ def main() -> None:
     engine.rootContext().setContextProperty("appController", app_controller)
 
     engine.quit.connect(app.quit)
-    # Ensure Qt can find plugins and our bundled resources when frozen
-    add_qt_plugin_paths()
-    try:
-        # Make relative paths (e.g., 'main.qml', 'media/') resolve inside the bundle
-        os.chdir(app_base())
-    except Exception:
-        pass
-
-    # Expose resource directories to QML
-    engine.rootContext().setContextProperty("mediaDir", rel_path("media"))
-    engine.rootContext().setContextProperty("appBaseDir", str(app_base()))
-
-    # Load QML from the bundled path
-    from PySide6.QtCore import QUrl
-    qml_url = QUrl.fromLocalFile(rel_path("main.qml"))
-    engine.load(qml_url)
+    engine.load("main.qml")
 
     if not engine.rootObjects():
         print("❌ Failed to load QML")
