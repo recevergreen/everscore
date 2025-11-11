@@ -85,7 +85,7 @@ Window {
 
     MediaPlayer {
         id: player
-        source: "file:media/splash.mp4"
+        source: "file://" + mediaPath + "/splash.mp4"
         autoPlay: true
         videoOutput: videoOutput
 
@@ -127,7 +127,7 @@ Window {
                 Image {
                     id: background
                     anchors.fill: parent
-                    source: backgroundSwitch.checked ? "file:media/volleyballbg.png" : "file:media/basketballbg.png"
+                    source: backgroundSwitch.checked ? "file://" + mediaPath + "/volleyballbg.png" : "file://" + mediaPath + "/basketballbg.png"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -611,7 +611,7 @@ Window {
                         y: 720
                         width: 423
                         height: 322
-                        source: logoSwitch.checked ? "file:media/uenlogo.png" : "file:media/speedykick.png"
+                        source: logoSwitch.checked ? "file://" + mediaPath + "/uenlogo.png" : "file://" + mediaPath + "/speedykick.png"
                         visible: !shotClockSwitch.checked
                     }
 

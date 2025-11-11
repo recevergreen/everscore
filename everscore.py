@@ -20,7 +20,7 @@ from typing import Any
 
 import serial.tools.list_ports
 from consoles.sports import Basketball
-from PySide6.QtCore import Property, QObject, QSettings, QTimer, Signal, Slot
+from PySide6.QtCore import Property, QObject, QSettings, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QCloseEvent, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
@@ -430,8 +430,25 @@ def main() -> None:
     app_controller = AppController(udp_sock, dest_addr)
     engine.rootContext().setContextProperty("appController", app_controller)
 
+    # Resolve media path for bundled app
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        bundle_dir = sys._MEIPASS
+    else:
+        bundle_dir = os.path.dirname(os.path.abspath(__file__))
+    media_path = os.path.join(bundle_dir, "media")
+    engine.rootContext().setContextProperty("mediaPath", media_path)
+
     engine.quit.connect(app.quit)
-    engine.load("main.qml")
+
+    # Resolve path to QML file for PyInstaller
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        # This is the path to the temporary folder where PyInstaller unpacks the app
+        qml_file = os.path.join(sys._MEIPASS, "main.qml")
+    else:
+        # Running as a script
+        qml_file = "main.qml"
+
+    engine.load(QUrl.fromLocalFile(qml_file))
 
     if not engine.rootObjects():
         print("❌ Failed to load QML")
