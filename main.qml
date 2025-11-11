@@ -678,7 +678,7 @@ Window {
             width: 405
             height: 540
             anchors.right: parent.right
-            color: "white"
+            color: Application.styleHints.colorScheme === Qt.ColorScheme.Dark ? "#424242" : "white"
 
             Binding {
                 target: controlPanel
@@ -721,6 +721,7 @@ Window {
                 GroupBox {
                     title: "Operating Mode"
                     Layout.fillHeight: true
+                    Layout.fillWidth: true
                     Column {
                         spacing: 4
                         Row {
@@ -746,10 +747,14 @@ Window {
                     checked: false
                     Layout.fillHeight: true
                     Layout.preferredWidth: height
+                    Layout.rightMargin: -7
+                    Layout.bottomMargin: -6
                     Image {
                         source: "media/settings.svg"
-                        anchors.fill: parent
-                        anchors.margins: 4
+                        width: parent.width * 0.8
+                        height: parent.height * 0.8
+                        anchors.centerIn: parent
+                        fillMode: Image.PreserveAspectFit
                     }
                 }
             }
