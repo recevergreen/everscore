@@ -749,10 +749,20 @@ Window {
                     Layout.preferredWidth: height
                     Layout.rightMargin: -7
                     Layout.bottomMargin: -6
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        color: "black"
+                        opacity: 0.1
+                        radius: 4
+                        visible: Application.styleHints.colorScheme !== Qt.ColorScheme.Dark
+                    }
+
                     Image {
                         source: "media/settings.svg"
-                        width: parent.width * 0.8
-                        height: parent.height * 0.8
+                        width: parent.width * 0.6
+                        height: parent.height * 0.6
                         anchors.centerIn: parent
                         fillMode: Image.PreserveAspectFit
                     }
