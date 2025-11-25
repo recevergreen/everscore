@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing
 import os
 import os.path
 import signal
@@ -635,4 +636,5 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()

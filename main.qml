@@ -723,14 +723,11 @@ Window {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
                                 checked: appController.sendMode
-                                onToggled: {
-                                    appController.sendMode = checked;
-                                    modeLabel.text = checked ? "Send" : "Receive";
-                                }
+                                onToggled: appController.sendMode = checked
                             }
                             Label {
                                 id: modeLabel
-                                text: "Receive"
+                                text: modeSwitch.checked ? "Send" : "Receive"
                                 font.pixelSize: 18
                             }
                         }

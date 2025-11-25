@@ -15,6 +15,10 @@ a = Analysis(
     ],
     hiddenimports=[
         'serial',
+        'serial.tools.list_ports_osx',
+        'serial.tools.list_ports_linux',
+        'serial.tools.list_ports_windows',
+        'serial.tools.list_ports_common',
         'PySide6.QtQml',
         'PySide6.QtCore',
         'PySide6.QtGui',
