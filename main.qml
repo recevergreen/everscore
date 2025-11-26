@@ -159,7 +159,7 @@ Window {
                     property int homeSmallOnesDigit: 0
                     property int minuteTensDigit: 0
                     property int minuteOnesDigit: 0
-                    property int periodDigit: 0
+                    property int periodDigit: controlPanel.period
                     property int playerFoulDigit: 0
                     property int playerOnesDigit: 0
                     property int playerTensDigit: 0
@@ -206,8 +206,6 @@ Window {
                         y: 833
                         width: 65
                         height: 163
-                        source: controlPanel.isFastClockActive ? "file://" + mediaPath + "/decimalpoint.png" : "file://" + mediaPath + "/colon.png"
-                        visible: controlPanel.clockTimeInTenths > 0
                     }
 
                     // single-frame PNG: no clipping needed
@@ -296,7 +294,6 @@ Window {
                     Item {
                         id: fastTens
                         objectName: "fastTens"
-                        visible: false
                         x: 1077
                         y: 716
                         width: 208
@@ -313,7 +310,6 @@ Window {
                     Item {
                         id: fastOnes
                         objectName: "fastOnes"
-                        visible: false
                         x: 1291
                         y: 717
                         width: 218
@@ -330,7 +326,6 @@ Window {
                     Item {
                         id: fastTenths
                         objectName: "fastTenths"
-                        visible: false
                         x: 1603
                         y: 715
                         width: 224
@@ -429,7 +424,6 @@ Window {
                     Item {
                         id: minuteTens
                         objectName: "minuteTens"
-                        visible: false
                         x: 1016
                         y: 756
                         width: 184
@@ -446,7 +440,6 @@ Window {
                     Item {
                         id: minuteOnes
                         objectName: "minuteOnes"
-                        visible: true
                         x: 1206
                         y: 759
                         width: 185
@@ -530,7 +523,6 @@ Window {
                     Item {
                         id: secondTens
                         objectName: "secondTens"
-                        visible: true
                         x: 1487
                         y: 762
                         width: 189
@@ -547,7 +539,6 @@ Window {
                     Item {
                         id: secondOnes
                         objectName: "secondOnes"
-                        visible: true
                         x: 1674
                         y: 761
                         width: 193
@@ -778,13 +769,17 @@ Window {
                 property int clockTimeInTenths: 0
                 property bool clockRunning: false
 
+                Component.onCompleted: {
+                    updateClockDisplay();
+                }
+
                 // Read-only properties for display
                 readonly property int clockCurrentTotalSeconds: Math.floor(controlPanel.clockTimeInTenths / 10)
                 readonly property int clockCurrentMinutes: Math.floor(controlPanel.clockCurrentTotalSeconds / 60)
                 readonly property int clockCurrentSeconds: controlPanel.clockCurrentTotalSeconds % 60
                 readonly property int clockCurrentTenths: controlPanel.clockTimeInTenths % 10
 
-                readonly property bool isFastClockActive: controlPanel.clockCurrentTotalSeconds < 60 && controlPanel.clockTimeInTenths > 0
+                readonly property bool isFastClockActive: controlPanel.clockTimeInTenths < 600
 
                 Timer {
                     id: clockTimer
@@ -795,50 +790,66 @@ Window {
                         if (countDownSwitch.checked) {
                             if (controlPanel.clockTimeInTenths > 0) {
                                 controlPanel.clockTimeInTenths--;
-                            } else {
-                                controlPanel.clockRunning = false;
+                            }
+
+                            if (controlPanel.clockTimeInTenths <= 0) {
+                                Qt.callLater(function () {
+                                    controlPanel.clockRunning = false;
+                                });
                             }
                         } else {
                             // Cap counting up at 99:59.9
                             if (controlPanel.clockTimeInTenths < 59999) {
                                 controlPanel.clockTimeInTenths++;
                             } else {
-                                controlPanel.clockRunning = false;
+                                Qt.callLater(function () {
+                                    controlPanel.clockRunning = false;
+                                });
                             }
                         }
                     }
                 }
 
                 onClockTimeInTenthsChanged: {
-                    // Toggle visibility of clock digits
-                    minuteTens.visible = !controlPanel.isFastClockActive;
-                    minuteOnes.visible = !controlPanel.isFastClockActive;
-                    secondTens.visible = !controlPanel.isFastClockActive;
-                    secondOnes.visible = !controlPanel.isFastClockActive;
-                    fastTens.visible = controlPanel.isFastClockActive;
-                    fastOnes.visible = controlPanel.isFastClockActive;
-                    fastTenths.visible = controlPanel.isFastClockActive;
+                    updateClockDisplay();
+                }
 
-                    if (controlPanel.isFastClockActive) {
-                        var seconds = controlPanel.clockCurrentSeconds;
-                        var tenths = controlPanel.clockCurrentTenths;
+                function updateClockDisplay() {
+                    var showFast = isFastClockActive;
+
+                    // Set visibility for all clock components
+                    minuteTens.visible = !showFast;
+                    minuteOnes.visible = !showFast;
+                    secondTens.visible = !showFast;
+                    secondOnes.visible = !showFast;
+                    fastTens.visible = showFast;
+                    fastOnes.visible = showFast;
+                    fastTenths.visible = showFast;
+                    clockSeparator.visible = showFast || clockTimeInTenths > 0;
+                    clockSeparator.source = showFast ? "file://" + mediaPath + "/decimalpoint.png" : "file://" + mediaPath + "/colon.png";
+
+                    // Set digit values
+                    if (showFast) {
+                        var seconds = clockCurrentSeconds;
+                        var tenths = clockCurrentTenths;
                         basketballDigits.fastTensDigit = Math.floor(seconds / 10) % 10;
                         basketballDigits.fastOnesDigit = seconds % 10;
                         basketballDigits.fastTenthsDigit = tenths;
                     } else {
-                        var minutes = controlPanel.clockCurrentMinutes;
-                        var seconds = controlPanel.clockCurrentSeconds;
+                        var minutes = clockCurrentMinutes;
+                        var seconds = clockCurrentSeconds;
                         basketballDigits.minuteTensDigit = Math.floor(minutes / 10) % 10;
                         basketballDigits.minuteOnesDigit = minutes % 10;
                         basketballDigits.secondTensDigit = Math.floor(seconds / 10) % 10;
                         basketballDigits.secondOnesDigit = seconds % 10;
                     }
+
                     appController.sendManualUpdate();
 
-                    // Update UI
-                    if (controlPanel.clockRunning) {
-                        clockMinutesInput.text = controlPanel.clockCurrentMinutes.toString().padStart(2, '0');
-                        clockSecondsInput.text = controlPanel.clockCurrentSeconds.toString().padStart(2, '0');
+                    // Update UI text fields
+                    if (clockRunning) {
+                        clockMinutesInput.text = clockCurrentMinutes.toString().padStart(2, '0');
+                        clockSecondsInput.text = clockCurrentSeconds.toString().padStart(2, '0');
                     }
                 }
 
