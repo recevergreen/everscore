@@ -769,6 +769,14 @@ Window {
                 property int clockTimeInTenths: 0
                 property bool clockRunning: false
 
+                onClockRunningChanged: {
+                    if (!clockRunning && clockTimeInTenths <= 0) {
+                        basketballDigits.fastTensDigit = 0;
+                        basketballDigits.fastOnesDigit = 0;
+                        basketballDigits.fastTenthsDigit = 0;
+                    }
+                }
+
                 Component.onCompleted: {
                     updateClockDisplay();
                 }
@@ -790,21 +798,15 @@ Window {
                         if (countDownSwitch.checked) {
                             if (controlPanel.clockTimeInTenths > 0) {
                                 controlPanel.clockTimeInTenths--;
-                            }
-
-                            if (controlPanel.clockTimeInTenths <= 0) {
-                                Qt.callLater(function () {
-                                    controlPanel.clockRunning = false;
-                                });
+                            } else {
+                                controlPanel.clockRunning = false;
                             }
                         } else {
                             // Cap counting up at 99:59.9
                             if (controlPanel.clockTimeInTenths < 59999) {
                                 controlPanel.clockTimeInTenths++;
                             } else {
-                                Qt.callLater(function () {
-                                    controlPanel.clockRunning = false;
-                                });
+                                controlPanel.clockRunning = false;
                             }
                         }
                     }
