@@ -13,6 +13,7 @@ import json
 import multiprocessing
 import os
 import os.path
+import platform
 import signal
 import socket
 import sys
@@ -98,16 +99,22 @@ def get_local_ip() -> str:
     return IP
 
 
-def find_prolific_port() -> str | None:
+def find_serial_port() -> str | None:
     """
-    Scan serial ports and return the first PL2303/Prolific device, if any.
+    Scan serial ports and return the first Prolific PL2303 device, if any.
+    This function is OS-aware.
     """
+    system = platform.system()
     for port in serial.tools.list_ports.comports():
-        if (
-            "pl2303" in (port.description or "").lower()
-            or "prolific" in (port.manufacturer or "").lower()
-        ):
-            return port.device
+        if system == "Windows":
+            if "prolific" in (port.description or "").lower():
+                return port.device
+        else:  # macOS or Linux
+            if (
+                "pl2303" in (port.description or "").lower()
+                or "prolific" in (port.manufacturer or "").lower()
+            ):
+                return port.device
     return None
 
 
@@ -444,7 +451,7 @@ def main() -> None:
     # Resolve path to QML file for PyInstaller
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         # This is the path to the temporary folder where PyInstaller unpacks the app
-        qml_file = os.path.join(sys._MEIPASS, "main.qml")
+        qml_.qml_file = os.path.join(sys._MEIPASS, "main.qml")
     else:
         # Running as a script
         qml_file = "main.qml"
@@ -527,9 +534,9 @@ def main() -> None:
     serial_manager.data_received.connect(handle_serial_data)
 
     def serial_thread_target():
-        port = find_prolific_port() or "/dev/cu.PL2303-00001014"
-        if not os.path.exists(port):
-            print(f"ℹ️ Serial port '{port}' not found. Serial input will be disabled.")
+        port = find_serial_port()
+        if not port:
+            print("ℹ️ No Prolific serial port found. Serial input will be disabled.")
             return
 
         print(f"🔌 Attempting to open scoreboard serial port: {port}")
