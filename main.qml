@@ -13,10 +13,6 @@ Window {
     property int lockedWidth: 960
     width: lockedWidth
     height: 540
-    minimumWidth: lockedWidth
-    maximumWidth: lockedWidth
-    minimumHeight: height
-    maximumHeight: height
 
     title: qsTr("everscore")
     color: "black"
@@ -690,7 +686,6 @@ Window {
                             Switch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
-                                checked: appController.manualMode
                                 onToggled: appController.manualMode = checked
                             }
                             Label {
@@ -713,7 +708,6 @@ Window {
                             Switch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
-                                checked: appController.sendMode
                                 onToggled: appController.sendMode = checked
                             }
                             Label {

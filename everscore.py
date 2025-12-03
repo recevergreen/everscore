@@ -402,6 +402,9 @@ class AppController(QObject):
 # Main application
 # --------------------------------------------------------------------------- #
 def main() -> None:
+    # Suppress FFmpeg warnings
+    os.environ["QT_LOGGING_RULES"] = "qt.multimedia.ffmpeg.warning=false"
+
     # --------------------------------------------------------------------- #
     # Parse CLI arguments
     # --------------------------------------------------------------------- #
