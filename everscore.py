@@ -458,6 +458,7 @@ def main() -> None:
         print("❌ Failed to load QML")
         sys.exit(1)
     root = engine.rootObjects()[0]
+    root.setProperty("localIpAddress", get_local_ip())
 
     # --------------------------------------------------------------------- #
     # Get QML objects for diagnostics

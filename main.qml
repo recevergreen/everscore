@@ -26,18 +26,6 @@ Window {
         appController.prepareToQuit();
     }
 
-    Component.onCompleted: {
-        appController.manualMode = manualSwitch.checked;
-        appController.sendMode = modeSwitch.checked;
-    }
-
-    Connections {
-        target: app
-        function onAboutToQuit() {
-            on_quit();
-        }
-    }
-
     ColorDialog {
         id: colorDialog
         title: "Select Opponent Color"
