@@ -3,9 +3,11 @@
 # This is a PyInstaller spec file for Windows.
 
 from PySide6 import __path__ as pyside6_path
-from os.path import join
+from os.path import join, normpath
 
 block_cipher = None
+
+pyside6_plugins_path = join(pyside6_path[0], 'Qt', 'plugins')
 
 a = Analysis(
     ['everscore.py'],
@@ -14,9 +16,9 @@ a = Analysis(
     datas=[
         ('main.qml', '.'),
         ('media', 'media'),
-        (join(pyside6_path[0], 'Qt', 'plugins', 'platforms'), 'platforms'),
-        (join(pyside6_path[0], 'Qt', 'plugins', 'multimedia'), 'multimedia'),
-        (join(pyside6_path[0], 'Qt', 'plugins', 'imageformats'), 'imageformats'),
+        (normpath(join(pyside6_plugins_path, 'platforms')), 'platforms'),
+        (normpath(join(pyside6_plugins_path, 'multimedia')), 'multimedia'),
+        (normpath(join(pyside6_plugins_path, 'imageformats')), 'imageformats'),
     ],
     hiddenimports=[
         'serial',
