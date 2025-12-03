@@ -304,15 +304,18 @@ class AppController(QObject):
         """This slot is called from QML when the window is closing."""
         print("Shutdown sequence initiated. Arming process group termination.")
 
-        def kill_process_group():
-            print("Failsafe timer fired. Terminating process group.")
+        def kill_process():
+            print("Failsafe timer fired. Terminating process.")
             try:
-                os.killpg(os.getpgrp(), signal.SIGKILL)
+                if platform.system() == "Windows":
+                    os.kill(os.getpid(), signal.SIGTERM)
+                else:
+                    os.killpg(os.getpgrp(), signal.SIGKILL)
             except Exception as e:
-                print(f"Failed to kill process group: {e}. Falling back to os._exit().")
+                print(f"Failed to kill process: {e}. Falling back to os._exit().")
                 os._exit(1)
 
-        threading.Timer(0.5, kill_process_group).start()
+        threading.Timer(0.5, kill_process).start()
 
     @Slot()
     def sendManualUpdate(self):
@@ -444,14 +447,20 @@ def main() -> None:
     else:
         bundle_dir = os.path.dirname(os.path.abspath(__file__))
     media_path = os.path.join(bundle_dir, "media")
-    engine.rootContext().setContextProperty("mediaPath", media_path)
+
+    if platform.system() == "Windows":
+        engine.rootContext().setContextProperty(
+            "mediaPath", QUrl.fromLocalFile(media_path).toString()
+        )
+    else:
+        engine.rootContext().setContextProperty("mediaPath", media_path)
 
     engine.quit.connect(app.quit)
 
     # Resolve path to QML file for PyInstaller
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         # This is the path to the temporary folder where PyInstaller unpacks the app
-        qml_.qml_file = os.path.join(sys._MEIPASS, "main.qml")
+        qml_file = os.path.join(sys._MEIPASS, "main.qml")
     else:
         # Running as a script
         qml_file = "main.qml"
