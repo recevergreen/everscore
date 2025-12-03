@@ -2,6 +2,9 @@
 
 # This is a PyInstaller spec file for Windows.
 
+from PySide6 import __path__ as pyside6_path
+from os.path import join
+
 block_cipher = None
 
 a = Analysis(
@@ -11,11 +14,9 @@ a = Analysis(
     datas=[
         ('main.qml', '.'),
         ('media', 'media'),
-        # NOTE: The path to PySide6 may vary depending on the Python installation.
-        # You may need to adjust this path for your system.
-        ('venv/Lib/site-packages/PySide6/Qt/plugins/platforms', 'platforms'),
-        ('venv/Lib/site-packages/PySide6/Qt/plugins/multimedia', 'multimedia'),
-        ('venv/Lib/site-packages/PySide6/Qt/plugins/imageformats', 'imageformats'),
+        (join(pyside6_path[0], 'Qt', 'plugins', 'platforms'), 'platforms'),
+        (join(pyside6_path[0], 'Qt', 'plugins', 'multimedia'), 'multimedia'),
+        (join(pyside6_path[0], 'Qt', 'plugins', 'imageformats'), 'imageformats'),
     ],
     hiddenimports=[
         'serial',
