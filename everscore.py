@@ -444,8 +444,6 @@ def main() -> None:
     app_controller = AppController(udp_sock, dest_addr)
     engine.rootContext().setContextProperty("appController", app_controller)
 
-    engine.quit.connect(app.quit)
-
     # Resolve path to QML file for PyInstaller
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         # This is the path to the temporary folder where PyInstaller unpacks the app
@@ -460,20 +458,6 @@ def main() -> None:
         print("❌ Failed to load QML")
         sys.exit(1)
     root = engine.rootObjects()[0]
-
-    # --------------------------------------------------------------------- #
-    # Shutdown Logic
-    # --------------------------------------------------------------------- #
-    def on_quit():
-        print("aboutToQuit signal received. Disconnecting callback.")
-        _shutdown_event.set()
-
-    app.aboutToQuit.connect(on_quit)
-
-    # --------------------------------------------------------------------- #
-    # Expose properties to QML
-    # --------------------------------------------------------------------- #
-    root.setProperty("localIpAddress", get_local_ip())
 
     # --------------------------------------------------------------------- #
     # Get QML objects for diagnostics
