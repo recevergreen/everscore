@@ -441,20 +441,6 @@ def main() -> None:
     app_controller = AppController(udp_sock, dest_addr)
     engine.rootContext().setContextProperty("appController", app_controller)
 
-    # Resolve media path for bundled app
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        bundle_dir = sys._MEIPASS
-    else:
-        bundle_dir = os.path.dirname(os.path.abspath(__file__))
-    media_path = os.path.join(bundle_dir, "media")
-
-    if platform.system() == "Windows":
-        engine.rootContext().setContextProperty(
-            "mediaPath", QUrl.fromLocalFile(media_path).toString()
-        )
-    else:
-        engine.rootContext().setContextProperty("mediaPath", media_path)
-
     engine.quit.connect(app.quit)
 
     # Resolve path to QML file for PyInstaller

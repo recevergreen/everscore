@@ -85,7 +85,7 @@ Window {
 
     MediaPlayer {
         id: player
-        source: "file://" + mediaPath + "/splash.mp4"
+        source: "media/splash.mp4"
         autoPlay: true
         videoOutput: videoOutput
 
@@ -127,7 +127,7 @@ Window {
                 Image {
                     id: background
                     anchors.fill: parent
-                    source: backgroundSwitch.checked ? "file://" + mediaPath + "/volleyballbg.png" : "file://" + mediaPath + "/basketballbg.png"
+                    source: backgroundSwitch.checked ? "media/volleyballbg.png" : "media/basketballbg.png"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -602,7 +602,7 @@ Window {
                         y: 720
                         width: 423
                         height: 322
-                        source: logoSwitch.checked ? "file://" + mediaPath + "/uenlogo.png" : "file://" + mediaPath + "/speedykick.png"
+                        source: logoSwitch.checked ? "media/uenlogo.png" : "media/speedykick.png"
                         visible: !shotClockSwitch.checked
                     }
 
@@ -828,7 +828,7 @@ Window {
                     fastOnes.visible = showFast;
                     fastTenths.visible = showFast;
                     clockSeparator.visible = showFast || clockTimeInTenths > 0;
-                    clockSeparator.source = showFast ? "file://" + mediaPath + "/decimalpoint.png" : "file://" + mediaPath + "/colon.png";
+                    clockSeparator.source = showFast ? "media/decimalpoint.png" : "media/colon.png";
 
                     // Set digit values
                     if (showFast) {
