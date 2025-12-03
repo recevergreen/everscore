@@ -2,12 +2,17 @@
 
 # This is a PyInstaller spec file for Windows.
 
-from PySide6 import __path__ as pyside6_path
+from PySide6.QtCore import QCoreApplication
 from os.path import join, normpath
 
 block_cipher = None
 
-pyside6_plugins_path = join(pyside6_path[0], 'Qt', 'plugins')
+# Get the path to the PySide6 plugins
+pyside6_plugins_path = ''
+for path in QCoreApplication.libraryPaths():
+    if "PySide6" in path:
+        pyside6_plugins_path = path
+        break
 
 a = Analysis(
     ['everscore.py'],
