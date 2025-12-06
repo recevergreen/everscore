@@ -1276,7 +1276,7 @@ Window {
                             onToggled: appController.shotClock = checked
                         }
                         Label {
-                            text: " Shot Clock"
+                            text: "Shot Clock"
                             font.pixelSize: 18
                         }
                     }
