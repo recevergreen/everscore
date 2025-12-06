@@ -123,7 +123,7 @@ Window {
                 Image {
                     id: background
                     anchors.fill: parent
-                    source: backgroundSwitch.checked ? "media/volleyballbg.png" : "media/basketballbg.png"
+                    source: appController.background ? "media/volleyballbg.png" : "media/basketballbg.png"
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -1189,7 +1189,7 @@ Window {
                     Row {
                         spacing: 8
                         Label {
-                            text: "Opponent Color"
+                            text: "Away Color"
                             font.pixelSize: 18
                         }
                         Button {
@@ -1202,7 +1202,7 @@ Window {
                     Row {
                         spacing: 8
                         Label {
-                            text: "Opponent Logo"
+                            text: "Away Logo"
                             font.pixelSize: 18
                         }
                         Button {
@@ -1243,7 +1243,7 @@ Window {
                     Row {
                         spacing: 8
                         Label {
-                            text: "Opponent Name"
+                            text: "Away Name"
                             font.pixelSize: 18
                         }
                         TextField {
@@ -1276,7 +1276,7 @@ Window {
                             onToggled: appController.shotClock = checked
                         }
                         Label {
-                            text: "Show Shot Clock"
+                            text: " Shot Clock"
                             font.pixelSize: 18
                         }
                     }
@@ -1306,14 +1306,16 @@ Window {
                     }
                     Row {
                         spacing: 8
-                        Switch {
-                            id: backgroundSwitch
-                            checked: appController.background
-                            onCheckedChanged: appController.background = checked
-                        }
                         Label {
-                            text: backgroundSwitch.checked ? "Volleyball" : "Basketball"
+                            text: "Sport Mode"
                             font.pixelSize: 18
+                        }
+                        ComboBox {
+                            id: backgroundSelector
+                            model: ["Volleyball", "Basketball"]
+                            font.pixelSize: 18
+                            currentIndex: appController.background ? 0 : 1
+                            onActivated: appController.background = (currentIndex === 0)
                         }
                     }
                 }
