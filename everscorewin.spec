@@ -64,6 +64,6 @@ exe = EXE(
     strip=False,
     upx=True,
     # Set to False for production
-    console=True,
+    console=False,
     icon='icon.ico',
 )
