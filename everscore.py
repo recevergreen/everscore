@@ -156,6 +156,17 @@ class AppController(QObject):
 
     # --- Settings Properties ---
 
+    _homeColorChanged = Signal()
+
+    @Property(str, notify=_homeColorChanged)
+    def homeColor(self):
+        return self.settings.value("homeColor", "red")
+
+    @homeColor.setter
+    def homeColor(self, value):
+        self.settings.setValue("homeColor", value)
+        self._homeColorChanged.emit()
+
     _opponentColorChanged = Signal()
 
     @Property(str, notify=_opponentColorChanged)
@@ -616,7 +627,8 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
             new_clock_time_in_tenths = (minutes * 60 + seconds) * 10
 
         if is_auto_mode():
-            new_clock_time_in_tenths -= 1
+            if new_clock_time_in_tenths > 0:
+                new_clock_time_in_tenths -= 1
 
         # Ensure clock doesn't go negative
         if new_clock_time_in_tenths < 0:

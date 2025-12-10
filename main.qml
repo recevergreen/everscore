@@ -38,6 +38,18 @@ Window {
         }
     }
 
+    ColorDialog {
+        id: homeColorDialog
+        title: "Select Home Color"
+        selectedColor: appController.homeColor
+        onAccepted: {
+            var newColor = homeColorDialog.selectedColor;
+            if (newColor) {
+                appController.homeColor = newColor;
+            }
+        }
+    }
+
     FileDialog {
         id: opponentLogoDialog
         title: "Select Opponent Logo"
@@ -183,6 +195,16 @@ Window {
                         height: 324
                         source: appController.opponentLogo
                         fillMode: Image.PreserveAspectFit
+                        opacity: 0.5
+                    }
+
+                    Rectangle {
+                        id: homeColorOverlay
+                        x: 38
+                        y: 30
+                        width: 1048
+                        height: 315
+                        color: appController.homeColor
                         opacity: 0.5
                     }
 
@@ -686,7 +708,13 @@ Window {
                             Switch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
-                                onToggled: appController.manualMode = checked
+                                onToggled: {
+                                    appController.manualMode = checked;
+                                    if (!checked) {
+                                        // Switched to Automatic
+                                        controlPanel.clockRunning = false;
+                                    }
+                                }
                             }
                             Label {
                                 id: modeText
@@ -712,7 +740,7 @@ Window {
                             }
                             Label {
                                 id: modeLabel
-                                text: modeSwitch.checked ? "Send" : "Receive"
+                                text: modeSwitch.checked ? "Send" : "Listen"
                                 font.pixelSize: 18
                             }
                         }
@@ -1187,41 +1215,60 @@ Window {
                     visible: settingsButton.checked
 
                     Row {
-                        spacing: 8
-                        Label {
-                            text: "Away Color"
-                            font.pixelSize: 18
+                        spacing: 16
+                        Row {
+                            spacing: 8
+                            Label {
+                                text: "Home Color"
+                                font.pixelSize: 18
+                            }
+                            Button {
+                                text: "Select"
+                                onClicked: {
+                                    homeColorDialog.open();
+                                }
+                            }
                         }
-                        Button {
-                            text: "Select"
-                            onClicked: {
-                                colorDialog.open();
+                        Row {
+                            spacing: 8
+                            Label {
+                                text: "Home Logo"
+                                font.pixelSize: 18
+                            }
+                            Button {
+                                text: "Select"
+                                onClicked: {
+                                    homeLogoDialog.open();
+                                }
                             }
                         }
                     }
                     Row {
-                        spacing: 8
-                        Label {
-                            text: "Away Logo"
-                            font.pixelSize: 18
-                        }
-                        Button {
-                            text: "Select"
-                            onClicked: {
-                                opponentLogoDialog.open();
+                        spacing: 16
+                        Row {
+                            spacing: 8
+                            Label {
+                                text: "Away Color"
+                                font.pixelSize: 18
+                            }
+                            Button {
+                                text: "Select"
+                                onClicked: {
+                                    colorDialog.open();
+                                }
                             }
                         }
-                    }
-                    Row {
-                        spacing: 8
-                        Label {
-                            text: "Home Logo"
-                            font.pixelSize: 18
-                        }
-                        Button {
-                            text: "Select"
-                            onClicked: {
-                                homeLogoDialog.open();
+                        Row {
+                            spacing: 8
+                            Label {
+                                text: "Away Logo"
+                                font.pixelSize: 18
+                            }
+                            Button {
+                                text: "Select"
+                                onClicked: {
+                                    opponentLogoDialog.open();
+                                }
                             }
                         }
                     }
