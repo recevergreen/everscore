@@ -16,6 +16,7 @@ import os.path
 import platform
 import signal
 import socket
+import subprocess
 import sys
 import threading
 from typing import Any
@@ -314,12 +315,13 @@ class AppController(QObject):
     def prepareToQuit(self):
         """This slot is called from QML when the window is closing."""
         print("Shutdown sequence initiated. Arming process group termination.")
+        _shutdown_event.set()
 
         def kill_process():
             print("Failsafe timer fired. Terminating process.")
             try:
                 if platform.system() == "Windows":
-                    os.kill(os.getpid(), signal.SIGTERM)
+                    subprocess.call(["taskkill", "/F", "/T", "/PID", str(os.getpid())])
                 else:
                     os.killpg(os.getpgrp(), signal.SIGKILL)
             except Exception as e:
