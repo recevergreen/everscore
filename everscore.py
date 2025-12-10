@@ -268,9 +268,9 @@ class AppController(QObject):
 
     _backgroundChanged = Signal()
 
-    @Property(bool, notify=_backgroundChanged)
+    @Property(int, notify=_backgroundChanged)
     def background(self):
-        return self.settings.value("background", False, type=bool)
+        return self.settings.value("background", 1, type=int)
 
     @background.setter
     def background(self, value):

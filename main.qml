@@ -135,7 +135,7 @@ Window {
                 Image {
                     id: background
                     anchors.fill: parent
-                    source: appController.background ? "media/volleyballbg.png" : "media/basketballbg.png"
+                    source: ["media/volleyballbg.png", "media/basketballbg.png", "media/wrestlingbg.png"][appController.background]
                     fillMode: Image.PreserveAspectFit
                 }
 
@@ -701,6 +701,7 @@ Window {
                     id: controlModeGroup
                     title: "Control Mode"
                     Layout.fillHeight: true
+                    rightPadding: 8
                     Column {
                         spacing: 4
                         Row {
@@ -1359,10 +1360,10 @@ Window {
                         }
                         ComboBox {
                             id: backgroundSelector
-                            model: ["Volleyball", "Basketball"]
+                            model: ["Volleyball", "Basketball", "Wrestling"]
                             font.pixelSize: 18
-                            currentIndex: appController.background ? 0 : 1
-                            onActivated: appController.background = (currentIndex === 0)
+                            currentIndex: appController.background
+                            onActivated: appController.background = currentIndex
                         }
                     }
                 }
