@@ -711,6 +711,10 @@ Window {
                                 objectName: "manualSwitch"
                                 onToggled: {
                                     appController.manualMode = checked;
+                                    if (checked) {
+                                        modeSwitch.checked = true; // Manual mode always sends
+                                        appController.sendMode = true;
+                                    }
                                     if (!checked) {
                                         // Switched to Automatic
                                         controlPanel.clockRunning = false;
@@ -737,6 +741,7 @@ Window {
                             Switch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
+                                enabled: !manualSwitch.checked // Listen is only available in Automatic mode
                                 onToggled: appController.sendMode = checked
                             }
                             Label {

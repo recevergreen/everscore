@@ -93,6 +93,29 @@ def is_send_mode() -> bool:
     return False
 
 
+def _current_mode_flags() -> tuple[bool, bool]:
+    """Return a tuple of (is_auto, is_send) for convenience."""
+    return is_auto_mode(), is_send_mode()
+
+
+def should_apply_serial_input() -> bool:
+    """Serial input drives the UI only when in automatic+send mode."""
+    is_auto, is_send = _current_mode_flags()
+    return is_auto and is_send
+
+
+def should_apply_udp_input() -> bool:
+    """UDP input drives the UI only when in automatic+listen mode."""
+    is_auto, is_send = _current_mode_flags()
+    return is_auto and not is_send
+
+
+def should_apply_manual_input() -> bool:
+    """Manual input drives the UI (and outbound UDP) only when in manual+send mode."""
+    is_auto, is_send = _current_mode_flags()
+    return (not is_auto) and is_send
+
+
 # --------------------------------------------------------------------- #
 #  Helper: Get local IP address
 # --------------------------------------------------------------------- #
@@ -342,7 +365,7 @@ class AppController(QObject):
     @Slot()
     def sendManualUpdate(self):
         """Gathers state from QML and sends it over UDP if in manual+send mode."""
-        if is_auto_mode() or not is_send_mode():
+        if not should_apply_manual_input():
             return
 
         state = self._build_state_from_qml()
@@ -501,12 +524,12 @@ def main() -> None:
 
     @Slot(dict)
     def handle_serial_data(data):
-        if not is_auto_mode():
+        if not should_apply_serial_input():
             return
 
         score_updater.updateScore.emit(data)
 
-        if is_send_mode() and not _shutdown_event.is_set():
+        if not _shutdown_event.is_set():
             try:
                 udp_sock.sendto(json.dumps(data).encode(), dest_addr)
             except OSError as e:
@@ -515,7 +538,7 @@ def main() -> None:
 
     @Slot(str, str)
     def handle_udp_packet(payload_str, ip_addr):
-        if is_send_mode() or not is_auto_mode():
+        if not should_apply_udp_input():
             return
 
         sourceIpInput = root.findChild(QQuickItem, "sourceIpInput")
