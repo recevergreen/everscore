@@ -816,7 +816,8 @@ Window {
                     id: clockTimer
                     interval: 100 // Run every 100ms for tenths of a second
                     repeat: true
-                    running: controlPanel.clockRunning
+                    // Only advance the clock in manual mode; automatic/serial mode should not tick locally.
+                    running: controlPanel.clockRunning && manualSwitch.checked
                     onTriggered: {
                         if (countDownSwitch.checked) {
                             if (controlPanel.clockTimeInTenths > 0) {

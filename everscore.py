@@ -23,7 +23,16 @@ from typing import Any
 
 import serial.tools.list_ports
 from consoles.sports import Basketball
-from PySide6.QtCore import Property, QObject, QSettings, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import (
+    Property,
+    QMetaObject,
+    QObject,
+    QSettings,
+    QTimer,
+    QUrl,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QCloseEvent, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
@@ -628,15 +637,23 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
             seconds = to_int(parts[1]) if len(parts) > 1 else 0
             new_clock_time_in_tenths = (minutes * 60 + seconds) * 10
 
-        if is_auto_mode():
-            if new_clock_time_in_tenths > 0:
-                new_clock_time_in_tenths -= 1
-
         # Ensure clock doesn't go negative
         if new_clock_time_in_tenths < 0:
             new_clock_time_in_tenths = 0
 
+        auto_mode = is_auto_mode()
+        if auto_mode:
+            # Ensure the local timer is stopped so we don't double-count
+            controlPanel.setProperty("clockRunning", False)
+            # If the feed lands at 0.1 or below, clamp to 0 so the viewport reaches 00.0
+            if new_clock_time_in_tenths <= 1:
+                new_clock_time_in_tenths = 0
+
         controlPanel.setProperty("clockTimeInTenths", new_clock_time_in_tenths)
+        try:
+            QMetaObject.invokeMethod(controlPanel, "updateClockDisplay")
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
