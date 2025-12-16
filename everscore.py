@@ -325,7 +325,9 @@ class AppController(QObject):
 
     @Property(bool, notify=_sendModeChanged)
     def sendMode(self):
-        return self.settings.value("sendMode", False, type=bool)
+        # Default to "send" on Windows, "listen" on other platforms
+        default_value = sys.platform == "win32"
+        return self.settings.value("sendMode", default_value, type=bool)
 
     @sendMode.setter
     def sendMode(self, value):
