@@ -187,6 +187,12 @@ class AppController(QObject):
 
         self.settings = QSettings("The Evergreen State College", "everscore")
 
+        self._home_score_label = "Home Score"
+        self._away_score_label = "Away Score"
+        self._home_fouls_label = "Home Fouls"
+        self._away_fouls_label = "Away Fouls"
+        self._update_labels_for_sport(self.background)
+
     # --- Settings Properties ---
 
     _homeColorChanged = Signal()
@@ -309,6 +315,7 @@ class AppController(QObject):
     def background(self, value):
         self.settings.setValue("background", value)
         self._backgroundChanged.emit()
+        self._update_labels_for_sport(value)
 
     _manualModeChanged = Signal()
 
@@ -344,6 +351,50 @@ class AppController(QObject):
     def sourceIp(self, value):
         self.settings.setValue("sourceIp", value)
         self._sourceIpChanged.emit()
+
+    homeScoreLabelChanged = Signal()
+    awayScoreLabelChanged = Signal()
+    homeFoulsLabelChanged = Signal()
+    awayFoulsLabelChanged = Signal()
+
+    @Property(str, notify=homeScoreLabelChanged)
+    def homeScoreLabel(self):
+        return self._home_score_label
+
+    @Property(str, notify=awayScoreLabelChanged)
+    def awayScoreLabel(self):
+        return self._away_score_label
+
+    @Property(str, notify=homeFoulsLabelChanged)
+    def homeFoulsLabel(self):
+        return self._home_fouls_label
+
+    @Property(str, notify=awayFoulsLabelChanged)
+    def awayFoulsLabel(self):
+        return self._away_fouls_label
+
+    def _update_labels_for_sport(self, sport_index):
+        # sport_index corresponds to ["Volleyball", "Basketball", "Wrestling"]
+        if sport_index == 0:  # Volleyball
+            self._home_score_label = "Home Score"
+            self._away_score_label = "Away Score"
+            self._home_fouls_label = "Home Sets"
+            self._away_fouls_label = "Away Sets"
+        elif sport_index == 1:  # Basketball
+            self._home_score_label = "Home Score"
+            self._away_score_label = "Away Score"
+            self._home_fouls_label = "Home Fouls"
+            self._away_fouls_label = "Away Fouls"
+        elif sport_index == 2:  # Wrestling
+            self._home_score_label = "Home Match Score"
+            self._away_score_label = "Away Match Score"
+            self._home_fouls_label = "Home Team Score"
+            self._away_fouls_label = "Away Team Score"
+
+        self.homeScoreLabelChanged.emit()
+        self.awayScoreLabelChanged.emit()
+        self.homeFoulsLabelChanged.emit()
+        self.awayFoulsLabelChanged.emit()
 
     @Slot()
     def prepareToQuit(self):

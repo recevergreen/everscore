@@ -1047,7 +1047,7 @@ Window {
                         rowSpacing: 16
 
                         GroupBox {
-                            title: "Home Score"
+                            title: appController.homeScoreLabel
                             Layout.fillWidth: true
                             visible: manualSwitch.checked
                             Column {
@@ -1080,7 +1080,7 @@ Window {
                         }
 
                         GroupBox {
-                            title: "Visitor Score"
+                            title: appController.awayScoreLabel
                             Layout.fillWidth: true
                             visible: manualSwitch.checked
                             Column {
@@ -1114,7 +1114,7 @@ Window {
 
                         GroupBox {
                             id: homeFoulsBox
-                            title: "Home Fouls"
+                            title: appController.homeFoulsLabel
                             Layout.fillWidth: true
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
@@ -1148,7 +1148,7 @@ Window {
 
                         GroupBox {
                             id: visitorFoulsBox
-                            title: "Visitor Fouls"
+                            title: appController.awayFoulsLabel
                             Layout.fillWidth: true
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
