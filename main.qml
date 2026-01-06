@@ -624,6 +624,16 @@ Window {
                         visible: !shotClockSwitch.checked
                     }
 
+                    Image {
+                        id: wrestlingClockCover
+                        source: "media/wrestlingclockcover.png"
+                        x: 1010
+                        y: 720
+                        width: 858
+                        height: 320
+                        visible: appController.isWrestlingMode
+                    }
+
                     Item {
                         x: 38
                         y: 29
@@ -977,7 +987,7 @@ Window {
                     GroupBox {
                         title: "Clock"
                         width: parent.width
-                        visible: manualSwitch.checked
+                        visible: manualSwitch.checked && !appController.isWrestlingMode
 
                         Column {
                             spacing: 8

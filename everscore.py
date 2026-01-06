@@ -191,6 +191,7 @@ class AppController(QObject):
         self._away_score_label = "Away Score"
         self._home_fouls_label = "Home Fouls"
         self._away_fouls_label = "Away Fouls"
+        self._is_wrestling_mode = False
         self._update_labels_for_sport(self.background)
 
     # --- Settings Properties ---
@@ -356,6 +357,7 @@ class AppController(QObject):
     awayScoreLabelChanged = Signal()
     homeFoulsLabelChanged = Signal()
     awayFoulsLabelChanged = Signal()
+    isWrestlingModeChanged = Signal()
 
     @Property(str, notify=homeScoreLabelChanged)
     def homeScoreLabel(self):
@@ -373,6 +375,10 @@ class AppController(QObject):
     def awayFoulsLabel(self):
         return self._away_fouls_label
 
+    @Property(bool, notify=isWrestlingModeChanged)
+    def isWrestlingMode(self):
+        return self._is_wrestling_mode
+
     def _update_labels_for_sport(self, sport_index):
         # sport_index corresponds to ["Volleyball", "Basketball", "Wrestling"]
         if sport_index == 0:  # Volleyball
@@ -380,21 +386,25 @@ class AppController(QObject):
             self._away_score_label = "Away Score"
             self._home_fouls_label = "Home Sets"
             self._away_fouls_label = "Away Sets"
+            self._is_wrestling_mode = False
         elif sport_index == 1:  # Basketball
             self._home_score_label = "Home Score"
             self._away_score_label = "Away Score"
             self._home_fouls_label = "Home Fouls"
             self._away_fouls_label = "Away Fouls"
+            self._is_wrestling_mode = False
         elif sport_index == 2:  # Wrestling
             self._home_score_label = "Home Match Score"
             self._away_score_label = "Away Match Score"
             self._home_fouls_label = "Home Team Score"
             self._away_fouls_label = "Away Team Score"
+            self._is_wrestling_mode = True
 
         self.homeScoreLabelChanged.emit()
         self.awayScoreLabelChanged.emit()
         self.homeFoulsLabelChanged.emit()
         self.awayFoulsLabelChanged.emit()
+        self.isWrestlingModeChanged.emit()
 
     @Slot()
     def prepareToQuit(self):
