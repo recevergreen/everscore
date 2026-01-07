@@ -691,12 +691,6 @@ Window {
             anchors.right: parent.right
             color: Application.styleHints.colorScheme === Qt.ColorScheme.Dark ? "#424242" : "white"
 
-            Binding {
-                target: controlPanel
-                property: "anchors.topMargin"
-                value: (topControlsRow ? topControlsRow.height : 0) + 16
-            }
-
             RowLayout {
                 id: topControlsRow
                 spacing: 16
@@ -794,8 +788,14 @@ Window {
             Column {
                 id: controlPanel
                 objectName: "controlPanel"
-                anchors.fill: parent
-                anchors.margins: 16
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.top: topControlsRow.bottom
+                anchors.topMargin: 16
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                anchors.bottomMargin: 16
                 spacing: 16
 
                 property int homeScore: 0
@@ -1228,7 +1228,7 @@ Window {
                 Column {
                     id: settingsControls
                     width: parent.width
-                    spacing: 16
+                    spacing: 12
                     visible: settingsButton.checked
 
                     Row {
@@ -1380,6 +1380,14 @@ Window {
                             font.pixelSize: 18
                             currentIndex: appController.background
                             onActivated: appController.background = currentIndex
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Button {
+                            text: "Clear Graphics"
+                            font.pixelSize: 18
+                            onClicked: appController.clearGraphics()
                         }
                     }
                 }

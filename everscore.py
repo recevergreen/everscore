@@ -407,6 +407,14 @@ class AppController(QObject):
         self.isWrestlingModeChanged.emit()
 
     @Slot()
+    def clearGraphics(self):
+        """Resets team names and logos to their default state."""
+        self.homeName = "HOME"
+        self.opponentName = "GUEST"
+        self.homeLogo = ""
+        self.opponentLogo = ""
+
+    @Slot()
     def prepareToQuit(self):
         """This slot is called from QML when the window is closing."""
         print("Shutdown sequence initiated. Arming process group termination.")
