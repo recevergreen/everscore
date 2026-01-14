@@ -145,7 +145,7 @@ Window {
                     id: basketballDigits
                     objectName: "basketballDigits"
 
-                    // design canvas in 1080p, scaled down to fit basketballView
+                    // design canvas in 1920x1080, scaled down to fit basketballView
                     width: 1920
                     height: 1080
                     transformOrigin: Item.TopLeft
@@ -175,6 +175,9 @@ Window {
                     property int secondOnesDigit: 0
                     property int shotTensDigit: 0
                     property int shotOnesDigit: 0
+                    property int wgHundredsDigit: 0
+                    property int wgTensDigit: 0
+                    property int wgOnesDigit: 0
 
                     Image {
                         id: homeLogo
@@ -635,6 +638,63 @@ Window {
                     }
 
                     Item {
+                        id: wgHundreds
+                        x: 1183
+                        y: 805
+                        width: 177
+                        height: 235
+                        opacity: 0
+                        visible: appController.isWrestlingMode && !controlPanel.isHeavyweight
+                        Image {
+                            source: "media/wgHundreds.png"
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            sourceClipRect: Qt.rect(0, height * basketballDigits.wgHundredsDigit, width, height)
+                        }
+                    }
+
+                    Item {
+                        id: wgTens
+                        x: 1361
+                        y: 805
+                        width: 172
+                        height: 235
+                        opacity: 0
+                        visible: appController.isWrestlingMode && !controlPanel.isHeavyweight
+                        Image {
+                            source: "media/wgTens.png"
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            sourceClipRect: Qt.rect(0, height * basketballDigits.wgTensDigit, width, height)
+                        }
+                    }
+
+                    Item {
+                        id: wgOnes
+                        x: 1533
+                        y: 805
+                        width: 179
+                        height: 235
+                        visible: appController.isWrestlingMode && !controlPanel.isHeavyweight
+                        Image {
+                            source: "media/wgOnes.png"
+                            anchors.fill: parent
+                            fillMode: Image.Stretch
+                            sourceClipRect: Qt.rect(0, height * basketballDigits.wgOnesDigit, width, height)
+                        }
+                    }
+
+                    Image {
+                        id: heavyImage
+                        source: "media/heavy.png"
+                        x: 1010
+                        y: 812
+                        width: 858
+                        height: 228
+                        visible: appController.isWrestlingMode && controlPanel.isHeavyweight
+                    }
+
+                    Item {
                         x: 38
                         y: 29
                         width: 1051
@@ -803,6 +863,8 @@ Window {
                 property int homeFouls: 0
                 property int visitorFouls: 0
                 property int period: 1
+                property string weightClass: ""
+                readonly property bool isHeavyweight: (parseInt(weightClassInput.text, 10) > 199) || (weightClassInput.text.trim().length > 0 && weightClassInput.text.trim().toLowerCase().startsWith("h"))
 
                 property int clockTimeInTenths: 0
                 property bool clockRunning: false
@@ -980,6 +1042,32 @@ Window {
                                     placeholderText: "Leave empty to accept from any IP"
                                     onEditingFinished: appController.sourceIp = text
                                 }
+                            }
+                        }
+                    }
+
+                    GroupBox {
+                        title: "Team Names"
+                        width: parent.width
+                        visible: appController.isWrestlingMode && manualSwitch.checked
+                        Column {
+                            width: parent.width
+                            spacing: 8
+                            TextField {
+                                placeholderText: "Home Name"
+                                text: appController.homeName
+                                onEditingFinished: {
+                                    appController.homeName = text;
+                                }
+                                width: parent.width
+                            }
+                            TextField {
+                                placeholderText: "Away Name"
+                                text: appController.opponentName
+                                onEditingFinished: {
+                                    appController.opponentName = text;
+                                }
+                                width: parent.width
                             }
                         }
                     }
@@ -1193,13 +1281,14 @@ Window {
                         GroupBox {
                             title: "Period"
                             Layout.fillWidth: true
-                            Layout.columnSpan: 2
+                            Layout.columnSpan: appController.isWrestlingMode ? 1 : 2
                             visible: manualSwitch.checked
                             Column {
                                 spacing: 4
                                 Row {
                                     spacing: 4
                                     Button {
+                                        id: periodButton
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(controlPanel.period + 1);
@@ -1220,6 +1309,44 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
+                                }
+                            }
+                        }
+
+                        GroupBox {
+                            title: "Weight Class"
+                            Layout.fillWidth: true
+                            visible: appController.isWrestlingMode && manualSwitch.checked
+                            TextField {
+                                id: weightClassInput
+                                placeholderText: "Enter weight class"
+                                text: controlPanel.weightClass
+                                onTextChanged: {
+                                    controlPanel.weightClass = text;
+                                    var value = parseInt(text);
+                                    if (isNaN(value) || value < 0) {
+                                        value = 0;
+                                    }
+                                    if (value > 999) {
+                                        value = 999;
+                                    }
+
+                                    wgHundreds.opacity = value >= 100 ? 1 : 0;
+                                    wgTens.opacity = value >= 10 ? 1 : 0;
+
+                                    basketballDigits.wgHundredsDigit = Math.floor(value / 100) % 10;
+                                    basketballDigits.wgTensDigit = Math.floor(value / 10) % 10;
+                                    basketballDigits.wgOnesDigit = value % 10;
+                                }
+                                implicitHeight: periodButton.height
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                background: Rectangle {
+                                    radius: 2
+                                    border.width: 1
+                                    border.color: weightClassInput.activeFocus ? "orange" : "gray"
+                                    color: Application.styleHints.colorScheme === Qt.ColorScheme.Dark ? "#333" : "#fff"
                                 }
                             }
                         }
