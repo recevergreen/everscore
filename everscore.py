@@ -317,6 +317,17 @@ class AppController(QObject):
         self.settings.setValue("logo", value)
         self._logoChanged.emit()
 
+    _localNamesChanged = Signal()
+
+    @Property(bool, notify=_localNamesChanged)
+    def localNames(self):
+        return self.settings.value("localNames", True, type=bool)
+
+    @localNames.setter
+    def localNames(self, value):
+        self.settings.setValue("localNames", value)
+        self._localNamesChanged.emit()
+
     _backgroundChanged = Signal()
 
     @Property(int, notify=_backgroundChanged)
@@ -522,6 +533,8 @@ class AppController(QObject):
         except Exception as e:
             print(f"❌ Error building state from QML: {e}")
             return {}
+        state["home_name"] = self.homeName
+        state["opponent_name"] = self.opponentName
         state["weight_class"] = self.weightClass
         return state
 
@@ -762,6 +775,12 @@ def handle_score_update(
             QMetaObject.invokeMethod(controlPanel, "updateClockDisplay")
         except Exception:
             pass
+
+    if not app_controller.localNames:
+        if "home_name" in state:
+            app_controller.homeName = state["home_name"]
+        if "opponent_name" in state:
+            app_controller.opponentName = state["opponent_name"]
 
     if "weight_class" in state:
         app_controller.weightClass = state["weight_class"]

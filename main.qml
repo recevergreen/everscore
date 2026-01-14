@@ -1055,16 +1055,22 @@ Window {
                             TextField {
                                 placeholderText: "Home Name"
                                 text: appController.homeName
-                                onEditingFinished: {
-                                    appController.homeName = text;
+                                onTextChanged: {
+                                    if (appController.homeName !== text) {
+                                        appController.homeName = text;
+                                        appController.sendManualUpdate();
+                                    }
                                 }
                                 width: parent.width
                             }
                             TextField {
                                 placeholderText: "Away Name"
                                 text: appController.opponentName
-                                onEditingFinished: {
-                                    appController.opponentName = text;
+                                onTextChanged: {
+                                    if (appController.opponentName !== text) {
+                                        appController.opponentName = text;
+                                        appController.sendManualUpdate();
+                                    }
                                 }
                                 width: parent.width
                             }
@@ -1420,16 +1426,35 @@ Window {
                     }
                     Row {
                         spacing: 8
-                        Label {
-                            text: "Home Name"
-                            font.pixelSize: 18
+                        Item {
+                            width: childrenRect.width
+                            height: homeNameInput.height
+                            Label {
+                                text: "Home Name"
+                                font.pixelSize: 18
+                                anchors.centerIn: parent
+                            }
                         }
                         TextField {
                             id: homeNameInput
                             placeholderText: "Enter Home Name"
                             text: appController.homeName
-                            onEditingFinished: {
-                                appController.homeName = text;
+                            onTextChanged: {
+                                if (appController.homeName !== text) {
+                                    appController.homeName = text;
+                                    appController.sendManualUpdate();
+                                }
+                            }
+                        }
+                        Item {
+                            width: localNamesSwitch.width
+                            height: homeNameInput.height
+                            Switch {
+                                id: localNamesSwitch
+                                text: "Local"
+                                checked: appController.localNames
+                                onToggled: appController.localNames = checked
+                                anchors.centerIn: parent
                             }
                         }
                     }
@@ -1443,8 +1468,11 @@ Window {
                             id: opponentNameInput
                             placeholderText: "Enter Opponent Name"
                             text: appController.opponentName
-                            onEditingFinished: {
-                                appController.opponentName = text;
+                            onTextChanged: {
+                                if (appController.opponentName !== text) {
+                                    appController.opponentName = text;
+                                    appController.sendManualUpdate();
+                                }
                             }
                         }
                     }
