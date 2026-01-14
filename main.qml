@@ -863,8 +863,7 @@ Window {
                 property int homeFouls: 0
                 property int visitorFouls: 0
                 property int period: 1
-                property string weightClass: ""
-                readonly property bool isHeavyweight: (parseInt(weightClassInput.text, 10) > 199) || (weightClassInput.text.trim().length > 0 && weightClassInput.text.trim().toLowerCase().startsWith("h"))
+                readonly property bool isHeavyweight: (parseInt(appController.weightClass, 10) > 199) || (appController.weightClass.trim().length > 0 && appController.weightClass.trim().toLowerCase().startsWith("h"))
 
                 property int clockTimeInTenths: 0
                 property bool clockRunning: false
@@ -1320,9 +1319,9 @@ Window {
                             TextField {
                                 id: weightClassInput
                                 placeholderText: "Enter weight class"
-                                text: controlPanel.weightClass
+                                text: appController.weightClass
                                 onTextChanged: {
-                                    controlPanel.weightClass = text;
+                                    appController.weightClass = text;
                                     var value = parseInt(text);
                                     if (isNaN(value) || value < 0) {
                                         value = 0;

@@ -273,6 +273,17 @@ class AppController(QObject):
         self.settings.setValue("fontFamily", value)
         self._fontFamilyChanged.emit()
 
+    weightClassChanged = Signal()
+
+    @Property(str, notify=weightClassChanged)
+    def weightClass(self):
+        return self.settings.value("weightClass", "")
+
+    @weightClass.setter
+    def weightClass(self, value):
+        self.settings.setValue("weightClass", value)
+        self.weightClassChanged.emit()
+
     _shotClockChanged = Signal()
 
     @Property(bool, notify=_shotClockChanged)
@@ -511,6 +522,7 @@ class AppController(QObject):
         except Exception as e:
             print(f"❌ Error building state from QML: {e}")
             return {}
+        state["weight_class"] = self.weightClass
         return state
 
 
@@ -590,7 +602,7 @@ def main() -> None:
     # --------------------------------------------------------------------- #
     score_updater = ScoreUpdater()
     score_updater.updateScore.connect(
-        lambda data: handle_score_update(data, basketballDigits)
+        lambda data: handle_score_update(data, basketballDigits, app_controller)
     )
 
     @Slot(dict)
@@ -677,7 +689,9 @@ def main() -> None:
     sys.exit(app.exec())
 
 
-def handle_score_update(state: dict, basketballDigits: QQuickItem):
+def handle_score_update(
+    state: dict, basketballDigits: QQuickItem, app_controller: AppController
+):
     """The actual GUI update logic."""
     if not basketballDigits:
         return
@@ -748,6 +762,9 @@ def handle_score_update(state: dict, basketballDigits: QQuickItem):
             QMetaObject.invokeMethod(controlPanel, "updateClockDisplay")
         except Exception:
             pass
+
+    if "weight_class" in state:
+        app_controller.weightClass = state["weight_class"]
 
 
 if __name__ == "__main__":
