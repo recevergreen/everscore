@@ -1321,7 +1321,10 @@ Window {
                                 placeholderText: "Enter weight class"
                                 text: appController.weightClass
                                 onTextChanged: {
-                                    appController.weightClass = text;
+                                    if (appController.weightClass !== text) {
+                                        appController.weightClass = text;
+                                        appController.sendManualUpdate();
+                                    }
                                     var value = parseInt(text);
                                     if (isNaN(value) || value < 0) {
                                         value = 0;
