@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# This is a PyInstaller spec file for macOS.
+
 block_cipher = None
 
 a = Analysis(
