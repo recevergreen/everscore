@@ -21,6 +21,14 @@ Window {
     property bool receiveMode: false
     property string localIpAddress: "127.0.0.1"
 
+    function grabNextFrame() {
+        if (projectionController.is_projecting) {
+            viewportToStream.grabToImage(function (result) {
+                projectionController.updateImage(result);
+            });
+        }
+    }
+
     onClosing: {
         // Call the Python slot to arm the failsafe timer
         appController.prepareToQuit();
@@ -773,6 +781,8 @@ Window {
                             Switch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
+                                implicitWidth: 46
+                                implicitHeight: 24
                                 onToggled: {
                                     appController.manualMode = checked;
                                     if (checked) {
@@ -805,6 +815,8 @@ Window {
                             Switch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
+                                implicitWidth: 46
+                                implicitHeight: 24
                                 enabled: !manualSwitch.checked // Listen is only available in Automatic mode
                                 onToggled: appController.sendMode = checked
                             }
@@ -1007,40 +1019,62 @@ Window {
                 Column {
                     id: mainControls
                     width: parent.width
-                    spacing: 16
+                    spacing: 4
                     visible: !settingsButton.checked
 
-                    GroupBox {
-                        title: "Network"
+                    RowLayout {
                         width: parent.width
+                        spacing: 16
+                        GroupBox {
+                            title: "Network"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: projectBox.implicitHeight
 
-                        StackLayout {
-                            width: parent.width
-                            currentIndex: modeSwitch.checked ? 0 : 1
+                            StackLayout {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                width: parent.width
+                                currentIndex: modeSwitch.checked ? 0 : 1
 
-                            Column {
-                                spacing: 4
-                                Label {
-                                    text: "Broadcasting to network from:"
+                                Column {
+                                    spacing: 4
+                                    Label {
+                                        text: "Broadcasting to network from:"
+                                    }
+                                    Label {
+                                        text: mainWindow.localIpAddress
+                                        font.bold: true
+                                    }
                                 }
-                                Label {
-                                    text: mainWindow.localIpAddress
-                                    font.bold: true
+                                Column {
+                                    spacing: 4
+                                    Label {
+                                        text: "Source IP Address"
+                                    }
+                                    TextField {
+                                        id: sourceIpInput
+                                        objectName: "sourceIpInput"
+                                        width: parent.width
+                                        text: appController.sourceIp
+                                        placeholderText: "Leave empty to accept from any IP"
+                                        onEditingFinished: appController.sourceIp = text
+                                    }
                                 }
                             }
-                            Column {
-                                spacing: 4
-                                Label {
-                                    text: "Source IP Address"
-                                }
-                                TextField {
-                                    id: sourceIpInput
-                                    objectName: "sourceIpInput"
-                                    width: parent.width
-                                    text: appController.sourceIp
-                                    placeholderText: "Leave empty to accept from any IP"
-                                    onEditingFinished: appController.sourceIp = text
-                                }
+                        }
+
+                        GroupBox {
+                            id: projectBox
+                            title: "Project"
+                            Layout.fillWidth: true
+
+                            Button {
+                                id: projectButton
+                                width: parent.width
+                                text: checked ? "Stop Projecting" : "Project"
+                                checkable: true
+                                checked: projectionController.is_projecting
+                                onClicked: projectionController.toggleProjection(checked)
                             }
                         }
                     }
@@ -1133,6 +1167,8 @@ Window {
                                 spacing: 8
                                 Switch {
                                     id: countDownSwitch
+                                    implicitWidth: 46
+                                    implicitHeight: 24
                                     checked: true // Default to count down
                                     enabled: !controlPanel.clockRunning
                                 }
@@ -1147,17 +1183,20 @@ Window {
                         columns: 2
                         width: parent.width
                         columnSpacing: 16
-                        rowSpacing: 16
+                        rowSpacing: 4
 
                         GroupBox {
                             title: appController.homeScoreLabel
                             Layout.fillWidth: true
                             visible: manualSwitch.checked
                             Column {
+                                width: parent.width
                                 spacing: 4
-                                Row {
+                                RowLayout {
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 4
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
@@ -1165,6 +1204,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
@@ -1172,6 +1212,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", 0);
@@ -1187,10 +1228,13 @@ Window {
                             Layout.fillWidth: true
                             visible: manualSwitch.checked
                             Column {
+                                width: parent.width
                                 spacing: 4
-                                Row {
+                                RowLayout {
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 4
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
@@ -1198,6 +1242,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
@@ -1205,6 +1250,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", 0);
@@ -1221,10 +1267,13 @@ Window {
                             Layout.fillWidth: true
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
+                                width: parent.width
                                 spacing: 4
-                                Row {
+                                RowLayout {
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 4
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
@@ -1232,6 +1281,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
@@ -1239,6 +1289,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", 0);
@@ -1255,10 +1306,13 @@ Window {
                             Layout.fillWidth: true
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
+                                width: parent.width
                                 spacing: 4
-                                Row {
+                                RowLayout {
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 4
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
@@ -1266,6 +1320,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
@@ -1273,6 +1328,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", 0);
@@ -1289,11 +1345,14 @@ Window {
                             Layout.columnSpan: appController.isWrestlingMode ? 1 : 2
                             visible: manualSwitch.checked
                             Column {
+                                width: parent.width
                                 spacing: 4
-                                Row {
+                                RowLayout {
+                                    anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 4
                                     Button {
                                         id: periodButton
+                                        Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(controlPanel.period + 1);
@@ -1301,6 +1360,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(controlPanel.period - 1);
@@ -1308,6 +1368,7 @@ Window {
                                         }
                                     }
                                     Button {
+                                        Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(1);
@@ -1350,12 +1411,6 @@ Window {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                background: Rectangle {
-                                    radius: 2
-                                    border.width: 1
-                                    border.color: weightClassInput.activeFocus ? "orange" : "gray"
-                                    color: Application.styleHints.colorScheme === Qt.ColorScheme.Dark ? "#333" : "#fff"
-                                }
                             }
                         }
                     }
@@ -1432,7 +1487,7 @@ Window {
                             Label {
                                 text: "Home Name"
                                 font.pixelSize: 18
-                                anchors.centerIn: parent
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                         TextField {
@@ -1451,6 +1506,8 @@ Window {
                             height: homeNameInput.height
                             Switch {
                                 id: localNamesSwitch
+                                implicitWidth: 46
+                                implicitHeight: 24
                                 text: "Local"
                                 checked: appController.localNames
                                 onToggled: appController.localNames = checked
@@ -1493,6 +1550,8 @@ Window {
                         spacing: 8
                         Switch {
                             id: shotClockSwitch
+                            implicitWidth: 46
+                            implicitHeight: 24
                             checked: appController.shotClock
                             onToggled: appController.shotClock = checked
                         }
@@ -1505,8 +1564,10 @@ Window {
                         spacing: 8
                         Switch {
                             id: showFoulsSwitch
+                            implicitWidth: 46
+                            implicitHeight: 24
                             checked: appController.showFouls
-                            onCheckedChanged: appController.showFouls = checked
+                            onToggled: appController.showFouls = checked
                         }
                         Label {
                             text: "Show Fouls/Sets"
@@ -1517,8 +1578,10 @@ Window {
                         spacing: 8
                         Switch {
                             id: logoSwitch
+                            implicitWidth: 46
+                            implicitHeight: 24
                             checked: appController.logo
-                            onCheckedChanged: appController.logo = checked
+                            onToggled: appController.logo = checked
                         }
                         Label {
                             text: logoSwitch.checked ? "UEN Logo" : "Mascot Logo"

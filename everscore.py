@@ -28,22 +28,38 @@ from PySide6.QtCore import (
     QMetaObject,
     QObject,
     QSettings,
+    QSize,
     QTimer,
     QUrl,
     Signal,
     Slot,
 )
-from PySide6.QtGui import QCloseEvent, QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtQuick import QQuickItem
+from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
+from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
+from PySide6.QtQuick import QQuickImageProvider, QQuickItem
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
+_main_window: QObject | None = None
 
 
 def no_op(*args, **kwargs):
     """A no-operation function to silence callbacks during shutdown."""
     pass
+
+
+class ProjectionImageProvider(QQuickImageProvider):
+    """Provides the captured viewport image to the projection window."""
+
+    def __init__(self):
+        super().__init__(QQuickImageProvider.Image)
+        self.image: QImage | None = None
+
+    def requestImage(self, id: str, size: QSize, requestedSize: QSize) -> QImage:
+        if self.image:
+            return self.image
+        # Return a default blank image if none is available yet
+        return QImage(32, 32, QImage.Format.Format_RGB32)
 
 
 # --------------------------------------------------------------------- #
@@ -55,11 +71,9 @@ def is_auto_mode() -> bool:
     is unchecked. If the switch or window is not yet available, falls back to True.
     """
     try:
-        windows = QGuiApplication.allWindows()
-        if not windows:
+        if not _main_window:
             return True
-        root_obj: QObject = windows[0]
-        sw: QObject | None = root_obj.findChild(QObject, "manualSwitch")
+        sw: QObject | None = _main_window.findChild(QObject, "manualSwitch")
         if sw is None:
             print(
                 "⚠️  is_auto_mode: Could not find 'manualSwitch' in QML. Defaulting to True (automatic mode)."
@@ -77,11 +91,9 @@ def is_send_mode() -> bool:
     is checked. If the switch or window is not yet available, falls back to False.
     """
     try:
-        windows = QGuiApplication.allWindows()
-        if not windows:
+        if not _main_window:
             return False
-        root_obj: QObject = windows[0]
-        sw: QObject | None = root_obj.findChild(QObject, "modeSwitch")
+        sw: QObject | None = _main_window.findChild(QObject, "modeSwitch")
         if sw is None:
             print(
                 "⚠️  is_send_mode: Could not find 'modeSwitch' in QML. Defaulting to False (receive mode)."
@@ -170,6 +182,117 @@ class UdpDataManager(QObject):
     """Handles data coming from the UDP thread."""
 
     packet_received = Signal(str, str)  # payload, ip_address
+
+
+class ProjectionController(QObject):
+    """Controller for the external projection window."""
+
+    projectionChanged = Signal()
+    imageUpdated = Signal()
+    closeRequested = Signal()
+
+    def __init__(
+        self,
+        engine: QQmlApplicationEngine,
+        image_provider: ProjectionImageProvider,
+        parent: QObject | None = None,
+    ):
+        super().__init__(parent)
+        self._engine = engine
+        self._image_provider = image_provider
+        self._projection_window: QObject | None = None
+        self._is_projecting = False
+
+    @Property(bool, notify=projectionChanged)
+    def is_projecting(self) -> bool:
+        return self._is_projecting
+
+    def _find_external_screen(self) -> QScreen | None:
+        """Find the first available screen that is not the primary screen."""
+        screens = QGuiApplication.screens()
+        primary_screen = QGuiApplication.primaryScreen()
+        for screen in screens:
+            if screen != primary_screen:
+                return screen
+        if len(screens) > 1:
+            return screens[-1]  # Fallback to the last screen
+        return None
+
+    @Slot(QObject)
+    def updateImage(self, grab_result: QObject):
+        """Receives the grab result from QML and updates the image provider."""
+        if grab_result:
+            self._image_provider.image = grab_result.image()
+            self.imageUpdated.emit()
+
+            # If we are still projecting, trigger the next frame grab
+            if self._is_projecting:
+                QMetaObject.invokeMethod(self._engine.rootObjects()[0], "grabNextFrame")
+
+    @Slot()
+    def _on_projection_window_destroyed(self):
+        self._projection_window = None
+        # The UI state is already set to false, so we just clean up the window reference
+        if self._is_projecting:
+            self._is_projecting = False
+            self.projectionChanged.emit()
+
+    @Slot(bool)
+    def toggleProjection(self, checked: bool):
+        """Show or hide the projection window."""
+        if checked:
+            if self._projection_window:
+                return
+
+            main_window = self._engine.rootObjects()[0]
+
+            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+                qml_file = os.path.join(sys._MEIPASS, "projection.qml")
+            else:
+                qml_file = "projection.qml"
+
+            component = QQmlComponent(self._engine, QUrl.fromLocalFile(qml_file))
+            if component.isError():
+                for error in component.errors():
+                    print(f"❌ QML Component Error: {error.toString()}")
+                return
+
+            self._projection_window = component.createWithInitialProperties(
+                {"controller_prop": self}
+            )
+
+            if not self._projection_window:
+                print("❌ Failed to create projection window from component.")
+                return
+
+            self._projection_window.destroyed.connect(
+                self._on_projection_window_destroyed
+            )
+
+            external_screen = self._find_external_screen()
+            if external_screen:
+                geometry = external_screen.geometry()
+                self._projection_window.setX(geometry.x())
+                self._projection_window.setY(geometry.y())
+                self._projection_window.showFullScreen()
+            else:
+                self._projection_window.show()
+
+            self._is_projecting = True
+            self.projectionChanged.emit()
+            # Kick off the first frame grab
+            QMetaObject.invokeMethod(main_window, "grabNextFrame")
+
+        else:
+            if not self._is_projecting:
+                return
+
+            # Update UI state immediately
+            self._is_projecting = False
+            self.projectionChanged.emit()
+
+            if self._projection_window:
+                self.closeRequested.emit()
 
 
 class AppController(QObject):
@@ -472,11 +595,9 @@ class AppController(QObject):
         """Reconstructs the entire game state dictionary from QML properties."""
         state = {}
         try:
-            windows = QGuiApplication.allWindows()
-            if not windows:
+            if not _main_window:
                 return {}
-            root = windows[0]
-            basketballDigits = root.findChild(QQuickItem, "basketballDigits")
+            basketballDigits = _main_window.findChild(QQuickItem, "basketballDigits")
             if not basketballDigits:
                 return {}
 
@@ -511,8 +632,8 @@ class AppController(QObject):
 
             state["period"] = basketballDigits.property("periodDigit")
 
-            minuteTensItem = root.findChild(QQuickItem, "minuteTens")
-            fastTenthsItem = root.findChild(QQuickItem, "fastTenths")
+            minuteTensItem = _main_window.findChild(QQuickItem, "minuteTens")
+            fastTenthsItem = _main_window.findChild(QQuickItem, "fastTenths")
 
             if fastTenthsItem and fastTenthsItem.property("visible"):
                 sec = basketballDigits.property(
@@ -543,6 +664,7 @@ class AppController(QObject):
 # Main application
 # --------------------------------------------------------------------------- #
 def main() -> None:
+    global _main_window
     # Suppress FFmpeg warnings
     os.environ["QT_LOGGING_RULES"] = "qt.multimedia.ffmpeg.warning=false"
 
@@ -585,6 +707,14 @@ def main() -> None:
     app_controller = AppController(udp_sock, dest_addr)
     engine.rootContext().setContextProperty("appController", app_controller)
 
+    projection_image_provider = ProjectionImageProvider()
+    engine.addImageProvider("projection", projection_image_provider)
+
+    projection_controller = ProjectionController(engine, projection_image_provider)
+    engine.rootContext().setContextProperty(
+        "projectionController", projection_controller
+    )
+
     # Resolve path to QML file for PyInstaller
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         # This is the path to the temporary folder where PyInstaller unpacks the app
@@ -598,13 +728,13 @@ def main() -> None:
     if not engine.rootObjects():
         print("❌ Failed to load QML")
         sys.exit(1)
-    root = engine.rootObjects()[0]
-    root.setProperty("localIpAddress", get_local_ip())
+    _main_window = engine.rootObjects()[0]
+    _main_window.setProperty("localIpAddress", get_local_ip())
 
     # --------------------------------------------------------------------- #
     # Get QML objects for diagnostics
     # --------------------------------------------------------------------- #
-    basketballDigits = root.findChild(QQuickItem, "basketballDigits")
+    basketballDigits = _main_window.findChild(QQuickItem, "basketballDigits")
     if not basketballDigits:
         print(
             "❌ Critical error: Could not find QML item with objectName 'basketballDigits'. UI will not update."
@@ -637,7 +767,7 @@ def main() -> None:
         if not should_apply_udp_input():
             return
 
-        sourceIpInput = root.findChild(QQuickItem, "sourceIpInput")
+        sourceIpInput = _main_window.findChild(QQuickItem, "sourceIpInput")
         target_ip = ""
         if sourceIpInput:
             target_ip = sourceIpInput.property("text")
