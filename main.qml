@@ -1504,11 +1504,15 @@ Window {
                                 id: localNamesSwitch
                                 implicitWidth: 46
                                 implicitHeight: 24
-                                text: "Local"
-                                checked: appController.localNames
+                                checked: true
                                 onToggled: appController.localNames = checked
                                 anchors.centerIn: parent
                             }
+                        }
+                        Label {
+                            text: "Local"
+                            font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Row {
