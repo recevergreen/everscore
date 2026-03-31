@@ -22,11 +22,7 @@ Window {
     property string localIpAddress: "127.0.0.1"
 
     function grabNextFrame() {
-        if (projectionController.is_projecting) {
-            viewportToStream.grabToImage(function (result) {
-                projectionController.updateImage(result);
-            });
-        }
+        // No-op: projection now renders its own independent copy of the scoreboard.
     }
 
     onClosing: {

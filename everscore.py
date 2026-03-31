@@ -13,6 +13,7 @@ import json
 import multiprocessing
 import os
 import os.path
+import time
 import platform
 import signal
 import socket
@@ -38,9 +39,6 @@ from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider, QQuickItem
 
-os.environ["QSG_RENDER_LOOP"] = (
-    "basic"  # Fallback to prevent render thread from pausing
-)
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
@@ -192,59 +190,17 @@ class ProjectionController(QObject):
     """Controller for the external projection window."""
 
     projectionChanged = Signal()
-    imageUpdated = Signal()
     closeRequested = Signal()
 
     def __init__(
         self,
         engine: QQmlApplicationEngine,
-        image_provider: ProjectionImageProvider,
         parent: QObject | None = None,
     ):
         super().__init__(parent)
         self._engine = engine
-        self._image_provider = image_provider
         self._projection_window: QObject | None = None
         self._is_projecting = False
-
-        self._grab_timer = QTimer(self)
-        self._grab_timer.setInterval(16)  # ~60 FPS
-        self._grab_timer.timeout.connect(self._request_next_frame)
-
-        # Load objc runtime for macOS occlusion hack
-        self._objc_msgSend_bool = None
-        self._set_occluded_sel = None
-        self._window_sel = None
-        self._objc_msgSend = None
-
-        if sys.platform == "darwin":
-            try:
-                import ctypes
-                import ctypes.util
-
-                objc_lib = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
-
-                self._objc_msgSend = objc_lib.objc_msgSend
-                self._objc_msgSend.restype = ctypes.c_void_p
-                self._objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-
-                sel_registerName = objc_lib.sel_registerName
-                sel_registerName.restype = ctypes.c_void_p
-                sel_registerName.argtypes = [ctypes.c_char_p]
-
-                self._window_sel = sel_registerName(b"window")
-                self._set_occluded_sel = sel_registerName(
-                    b"_setOcclusionStateIsVisible:"
-                )
-
-                self._objc_msgSend_bool = ctypes.cast(
-                    self._objc_msgSend,
-                    ctypes.CFUNCTYPE(
-                        None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool
-                    ),
-                )
-            except Exception as e:
-                print(f"Failed to initialize macOS objective-c runtime bindings: {e}")
 
     @Property(bool, notify=projectionChanged)
     def is_projecting(self) -> bool:
@@ -258,45 +214,14 @@ class ProjectionController(QObject):
             if screen != primary_screen:
                 return screen
         if len(screens) > 1:
-            return screens[-1]  # Fallback to the last screen
+            return screens[-1]
         return None
-
-    @Slot()
-    def _request_next_frame(self):
-        if self._is_projecting and self._engine.rootObjects():
-            main_window = self._engine.rootObjects()[0]
-
-            # Constantly force the macOS window server to consider this window visible
-            if sys.platform == "darwin" and self._objc_msgSend_bool:
-                try:
-                    import ctypes
-
-                    view_ptr = main_window.winId()
-                    ns_window_ptr = self._objc_msgSend(
-                        ctypes.c_void_p(view_ptr), self._window_sel
-                    )
-                    if ns_window_ptr:
-                        self._objc_msgSend_bool(
-                            ctypes.c_void_p(ns_window_ptr), self._set_occluded_sel, True
-                        )
-                except Exception:
-                    pass
-
-            QMetaObject.invokeMethod(main_window, "grabNextFrame")
-
-    @Slot(QObject)
-    def updateImage(self, grab_result: QObject):
-        """Receives the grab result from QML and updates the image provider."""
-        if grab_result and grab_result.image().width() > 0:
-            self._image_provider.image = grab_result.image()
-            self.imageUpdated.emit()
 
     @Slot()
     def _on_projection_window_destroyed(self):
         self._projection_window = None
         if self._is_projecting:
             self._is_projecting = False
-            self._grab_timer.stop()
             self.projectionChanged.emit()
 
     @Slot(bool)
@@ -305,8 +230,6 @@ class ProjectionController(QObject):
         if checked:
             if self._projection_window:
                 return
-
-            main_window = self._engine.rootObjects()[0]
 
             if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
                 qml_file = os.path.join(sys._MEIPASS, "projection.qml")
@@ -342,14 +265,12 @@ class ProjectionController(QObject):
 
             self._is_projecting = True
             self.projectionChanged.emit()
-            self._grab_timer.start()
 
         else:
             if not self._is_projecting:
                 return
 
             self._is_projecting = False
-            self._grab_timer.stop()
             self.projectionChanged.emit()
 
             if self._projection_window:
@@ -807,8 +728,14 @@ def main() -> None:
                     ctypes.c_void_p(reason_nsstring),
                 )
 
-                # Extract the pointer value so we can store it safely
+                # beginActivityWithOptions:reason: returns an autoreleased object.
+                # Without an explicit retain it is deallocated on the next run-loop
+                # drain, which immediately re-enables App Nap and causes timer
+                # coalescing (our 16 ms QTimer drops to ~1 Hz when the window is
+                # occluded).  Call retain so the token lives for the app's lifetime.
                 if activity:
+                    retain_sel = sel_registerName(b"retain")
+                    objc_msgSend(ctypes.c_void_p(activity), retain_sel)
                     activity_value = activity
                 print("App Nap and CPU throttling disabled successfully via ctypes.")
 
@@ -861,10 +788,7 @@ def main() -> None:
     app_controller = AppController(udp_sock, dest_addr)
     engine.rootContext().setContextProperty("appController", app_controller)
 
-    projection_image_provider = ProjectionImageProvider()
-    engine.addImageProvider("projection", projection_image_provider)
-
-    projection_controller = ProjectionController(engine, projection_image_provider)
+    projection_controller = ProjectionController(engine)
     engine.rootContext().setContextProperty(
         "projectionController", projection_controller
     )
@@ -884,6 +808,13 @@ def main() -> None:
         sys.exit(1)
     _main_window = engine.rootObjects()[0]
     _main_window.setProperty("localIpAddress", get_local_ip())
+
+    _control_panel = _main_window.findChild(QObject, "controlPanel")
+    _basketball_digits = _main_window.findChild(QQuickItem, "basketballDigits")
+    if _control_panel:
+        engine.rootContext().setContextProperty("sharedControlPanel", _control_panel)
+    if _basketball_digits:
+        engine.rootContext().setContextProperty("sharedBasketballDigits", _basketball_digits)
 
     # --------------------------------------------------------------------- #
     # Get QML objects for diagnostics
