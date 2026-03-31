@@ -38,6 +38,10 @@ from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider, QQuickItem
 
+os.environ["QSG_RENDER_LOOP"] = (
+    "basic"  # Fallback to prevent render thread from pausing
+)
+
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
 _main_window: QObject | None = None
@@ -203,6 +207,45 @@ class ProjectionController(QObject):
         self._projection_window: QObject | None = None
         self._is_projecting = False
 
+        self._grab_timer = QTimer(self)
+        self._grab_timer.setInterval(16)  # ~60 FPS
+        self._grab_timer.timeout.connect(self._request_next_frame)
+
+        # Load objc runtime for macOS occlusion hack
+        self._objc_msgSend_bool = None
+        self._set_occluded_sel = None
+        self._window_sel = None
+        self._objc_msgSend = None
+
+        if sys.platform == "darwin":
+            try:
+                import ctypes
+                import ctypes.util
+
+                objc_lib = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+
+                self._objc_msgSend = objc_lib.objc_msgSend
+                self._objc_msgSend.restype = ctypes.c_void_p
+                self._objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+                sel_registerName = objc_lib.sel_registerName
+                sel_registerName.restype = ctypes.c_void_p
+                sel_registerName.argtypes = [ctypes.c_char_p]
+
+                self._window_sel = sel_registerName(b"window")
+                self._set_occluded_sel = sel_registerName(
+                    b"_setOcclusionStateIsVisible:"
+                )
+
+                self._objc_msgSend_bool = ctypes.cast(
+                    self._objc_msgSend,
+                    ctypes.CFUNCTYPE(
+                        None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool
+                    ),
+                )
+            except Exception as e:
+                print(f"Failed to initialize macOS objective-c runtime bindings: {e}")
+
     @Property(bool, notify=projectionChanged)
     def is_projecting(self) -> bool:
         return self._is_projecting
@@ -218,23 +261,42 @@ class ProjectionController(QObject):
             return screens[-1]  # Fallback to the last screen
         return None
 
+    @Slot()
+    def _request_next_frame(self):
+        if self._is_projecting and self._engine.rootObjects():
+            main_window = self._engine.rootObjects()[0]
+
+            # Constantly force the macOS window server to consider this window visible
+            if sys.platform == "darwin" and self._objc_msgSend_bool:
+                try:
+                    import ctypes
+
+                    view_ptr = main_window.winId()
+                    ns_window_ptr = self._objc_msgSend(
+                        ctypes.c_void_p(view_ptr), self._window_sel
+                    )
+                    if ns_window_ptr:
+                        self._objc_msgSend_bool(
+                            ctypes.c_void_p(ns_window_ptr), self._set_occluded_sel, True
+                        )
+                except Exception:
+                    pass
+
+            QMetaObject.invokeMethod(main_window, "grabNextFrame")
+
     @Slot(QObject)
     def updateImage(self, grab_result: QObject):
         """Receives the grab result from QML and updates the image provider."""
-        if grab_result:
+        if grab_result and grab_result.image().width() > 0:
             self._image_provider.image = grab_result.image()
             self.imageUpdated.emit()
-
-            # If we are still projecting, trigger the next frame grab
-            if self._is_projecting:
-                QMetaObject.invokeMethod(self._engine.rootObjects()[0], "grabNextFrame")
 
     @Slot()
     def _on_projection_window_destroyed(self):
         self._projection_window = None
-        # The UI state is already set to false, so we just clean up the window reference
         if self._is_projecting:
             self._is_projecting = False
+            self._grab_timer.stop()
             self.projectionChanged.emit()
 
     @Slot(bool)
@@ -280,15 +342,14 @@ class ProjectionController(QObject):
 
             self._is_projecting = True
             self.projectionChanged.emit()
-            # Kick off the first frame grab
-            QMetaObject.invokeMethod(main_window, "grabNextFrame")
+            self._grab_timer.start()
 
         else:
             if not self._is_projecting:
                 return
 
-            # Update UI state immediately
             self._is_projecting = False
+            self._grab_timer.stop()
             self.projectionChanged.emit()
 
             if self._projection_window:
@@ -664,6 +725,96 @@ class AppController(QObject):
 # Main application
 # --------------------------------------------------------------------------- #
 def main() -> None:
+    # Disable App Nap on macOS using ctypes so we don't need pyobjc
+    activity_value = None
+    if sys.platform == "darwin":
+        try:
+            import ctypes
+            import ctypes.util
+
+            # Load Foundation
+            foundation = ctypes.cdll.LoadLibrary(ctypes.util.find_library("Foundation"))
+
+            # Setup objc_msgSend with basic signature
+            objc_msgSend = foundation.objc_msgSend
+            objc_msgSend.restype = ctypes.c_void_p
+            objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+            # Setup sel_registerName
+            sel_registerName = foundation.sel_registerName
+            sel_registerName.restype = ctypes.c_void_p
+            sel_registerName.argtypes = [ctypes.c_char_p]
+
+            # Setup objc_getClass
+            objc_getClass = foundation.objc_getClass
+            objc_getClass.restype = ctypes.c_void_p
+            objc_getClass.argtypes = [ctypes.c_char_p]
+
+            # Get NSProcessInfo class
+            NSProcessInfo = objc_getClass(b"NSProcessInfo")
+            processInfo_sel = sel_registerName(b"processInfo")
+
+            # Call [NSProcessInfo processInfo]
+            process_info = objc_msgSend(NSProcessInfo, processInfo_sel)
+
+            if process_info:
+                # Call beginActivityWithOptions:reason:
+                beginActivity_sel = sel_registerName(
+                    b"beginActivityWithOptions:reason:"
+                )
+
+                # Create NSString for reason
+                NSString = objc_getClass(b"NSString")
+                stringWithUTF8String_sel = sel_registerName(b"stringWithUTF8String:")
+                reason_str = b"Everscore is running a live scoreboard."
+
+                # Cast msgSend for stringWithUTF8String
+                objc_msgSend_string = ctypes.cast(
+                    objc_msgSend,
+                    ctypes.CFUNCTYPE(
+                        ctypes.c_void_p,
+                        ctypes.c_void_p,
+                        ctypes.c_void_p,
+                        ctypes.c_char_p,
+                    ),
+                )
+
+                reason_nsstring = objc_msgSend_string(
+                    NSString, stringWithUTF8String_sel, reason_str
+                )
+
+                # Combine UserInitiated and LatencyCritical flags
+                NSActivityUserInitiated = 0x00FFFFFF
+                NSActivityLatencyCritical = 0xFF00000000
+                options = NSActivityUserInitiated | NSActivityLatencyCritical
+
+                # Cast msgSend to accept uint64_t and id
+                objc_msgSend_activity = ctypes.cast(
+                    objc_msgSend,
+                    ctypes.CFUNCTYPE(
+                        ctypes.c_void_p,
+                        ctypes.c_void_p,
+                        ctypes.c_void_p,
+                        ctypes.c_uint64,
+                        ctypes.c_void_p,
+                    ),
+                )
+
+                activity = objc_msgSend_activity(
+                    ctypes.c_void_p(process_info),
+                    beginActivity_sel,
+                    options,
+                    ctypes.c_void_p(reason_nsstring),
+                )
+
+                # Extract the pointer value so we can store it safely
+                if activity:
+                    activity_value = activity
+                print("App Nap and CPU throttling disabled successfully via ctypes.")
+
+        except Exception as e:
+            print(f"An error occurred while trying to disable App Nap via ctypes: {e}")
+
     global _main_window
     # Suppress FFmpeg warnings
     os.environ["QT_LOGGING_RULES"] = "qt.multimedia.ffmpeg.warning=false"
@@ -701,6 +852,9 @@ def main() -> None:
     # Initialise Qt/QML scene
     # --------------------------------------------------------------------- #
     app = QGuiApplication(sys.argv)
+    if activity_value:
+        # Keep the activity object alive for the duration of the app
+        app.setProperty("appNapActivity", activity_value)
     app.setQuitOnLastWindowClosed(True)
     engine = QQmlApplicationEngine()
 
