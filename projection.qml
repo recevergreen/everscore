@@ -11,6 +11,12 @@ Window {
 
     property var controller_prop: null
 
+    onClosing: {
+        if (controller_prop) {
+            controller_prop.onProjectionWindowClosed();
+        }
+    }
+
     Shortcut {
         sequence: "Esc"
         onActivated: {

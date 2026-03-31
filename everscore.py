@@ -224,6 +224,14 @@ class ProjectionController(QObject):
             self._is_projecting = False
             self.projectionChanged.emit()
 
+    @Slot()
+    def onProjectionWindowClosed(self):
+        """Called by the projection window when the user closes it via the OS."""
+        self._projection_window = None
+        if self._is_projecting:
+            self._is_projecting = False
+            self.projectionChanged.emit()
+
     @Slot(bool)
     def toggleProjection(self, checked: bool):
         """Show or hide the projection window."""

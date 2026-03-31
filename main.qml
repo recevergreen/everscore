@@ -860,7 +860,7 @@ Window {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.top: topControlsRow.bottom
-                anchors.topMargin: 16
+                anchors.topMargin: settingsButton.checked ? 16 : 6
                 anchors.leftMargin: 16
                 anchors.rightMargin: 16
                 anchors.bottomMargin: 16
@@ -1072,6 +1072,13 @@ Window {
                                 checked: projectionController.is_projecting
                                 onClicked: projectionController.toggleProjection(checked)
                             }
+
+                            Connections {
+                                target: projectionController
+                                function onProjectionChanged() {
+                                    projectButton.checked = projectionController.is_projecting
+                                }
+                            }
                         }
                     }
 
@@ -1184,13 +1191,14 @@ Window {
                         GroupBox {
                             title: appController.homeScoreLabel
                             Layout.fillWidth: true
+                            Layout.preferredHeight: projectBox.implicitHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 4
+                                    spacing: 12
                                     Button {
                                         Layout.preferredWidth: 40
                                         text: "▲"
@@ -1222,13 +1230,14 @@ Window {
                         GroupBox {
                             title: appController.awayScoreLabel
                             Layout.fillWidth: true
+                            Layout.preferredHeight: projectBox.implicitHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 4
+                                    spacing: 12
                                     Button {
                                         Layout.preferredWidth: 40
                                         text: "▲"
@@ -1261,13 +1270,14 @@ Window {
                             id: homeFoulsBox
                             title: appController.homeFoulsLabel
                             Layout.fillWidth: true
+                            Layout.preferredHeight: projectBox.implicitHeight
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 4
+                                    spacing: 12
                                     Button {
                                         Layout.preferredWidth: 40
                                         text: "▲"
@@ -1300,13 +1310,14 @@ Window {
                             id: visitorFoulsBox
                             title: appController.awayFoulsLabel
                             Layout.fillWidth: true
+                            Layout.preferredHeight: projectBox.implicitHeight
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 4
+                                    spacing: 12
                                     Button {
                                         Layout.preferredWidth: 40
                                         text: "▲"
@@ -1338,14 +1349,15 @@ Window {
                         GroupBox {
                             title: "Period"
                             Layout.fillWidth: true
-                            Layout.columnSpan: appController.isWrestlingMode ? 1 : 2
+                            Layout.columnSpan: 1
+                            Layout.preferredHeight: projectBox.implicitHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 4
+                                    spacing: 12
                                     Button {
                                         id: periodButton
                                         Layout.preferredWidth: 40
