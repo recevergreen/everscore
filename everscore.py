@@ -21,7 +21,6 @@ import sys
 import threading
 from typing import Any
 
-import appnope
 import serial.tools.list_ports
 from consoles.sports import Basketball
 from PySide6.QtCore import (
@@ -38,8 +37,6 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider, QQuickItem
-
-appnope.nope()
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
