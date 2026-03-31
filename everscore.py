@@ -275,6 +275,7 @@ class ProjectionController(QObject):
 
             if self._projection_window:
                 self.closeRequested.emit()
+                self._projection_window = None
 
 
 class AppController(QObject):
