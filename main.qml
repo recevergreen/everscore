@@ -22,7 +22,7 @@ Window {
     property string localIpAddress: "127.0.0.1"
 
     function grabNextFrame() {
-        // No-op: projection now renders its own independent copy of the scoreboard.
+    // No-op: projection now renders its own independent copy of the scoreboard.
     }
 
     onClosing: {
@@ -1076,7 +1076,7 @@ Window {
                             Connections {
                                 target: projectionController
                                 function onProjectionChanged() {
-                                    projectButton.checked = projectionController.is_projecting
+                                    projectButton.checked = projectionController.is_projecting;
                                 }
                             }
                         }
@@ -1582,7 +1582,7 @@ Window {
                             onToggled: appController.showFouls = checked
                         }
                         Label {
-                            text: "Show Fouls/Sets"
+                            text: "Show Fouls/Sets/Team Score"
                             font.pixelSize: 18
                         }
                     }
