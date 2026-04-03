@@ -10,6 +10,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('main.qml', '.'),
+        ('projection.qml', '.'),
         ('media', 'media'),
         ('/opt/homebrew/lib/python3.13/site-packages/PySide6/Qt/plugins/platforms', 'platforms'),
         ('/opt/homebrew/lib/python3.13/site-packages/PySide6/Qt/plugins/multimedia', 'multimedia'),

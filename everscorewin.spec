@@ -20,6 +20,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('main.qml', '.'),
+        ('projection.qml', '.'),
         ('media', 'media'),
         (normpath(join(pyside6_plugins_path, 'platforms')), 'platforms'),
         (normpath(join(pyside6_plugins_path, 'multimedia')), 'multimedia'),
