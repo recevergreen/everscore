@@ -12,7 +12,23 @@ Window {
 
     property int lockedWidth: 960
     width: lockedWidth
-    height: 540
+    property bool widthAnimating: false
+    property bool snapBackWidth: false
+
+    property int lockedHeight: 540
+    height: lockedHeight
+
+    onWidthChanged: {
+        if (!widthAnimating && !snapBackWidth) {
+            snapBackWidth = true
+            width = Qt.binding(function() { return mainWindow.lockedWidth; })
+            snapBackWidth = false
+        }
+    }
+
+    onHeightChanged: {
+        height = lockedHeight
+    }
 
     title: qsTr("everscore")
     color: "black"
@@ -81,9 +97,17 @@ Window {
 
     // animate any change to `lockedWidth`
     Behavior on lockedWidth {
-        NumberAnimation {
-            duration: 1000
-            easing.type: Easing.InOutQuad
+        SequentialAnimation {
+            PropertyAction { target: mainWindow; property: "widthAnimating"; value: true }
+            NumberAnimation {
+                duration: 1000
+                easing.type: Easing.InOutQuad
+            }
+            ScriptAction {
+                script: {
+                    mainWindow.widthAnimating = false
+                }
+            }
         }
     }
 

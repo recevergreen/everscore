@@ -2,19 +2,28 @@
 
 # This is a PyInstaller spec file for macOS.
 
+from PySide6.QtCore import QCoreApplication
+from os.path import join, normpath
+
 block_cipher = None
+
+pyside6_plugins_path = ''
+for path in QCoreApplication.libraryPaths():
+    if "PySide6" in path:
+        pyside6_plugins_path = path
+        break
 
 a = Analysis(
     ['everscore.py'],
-    pathex=['/Users/kady/Projects/everscore/everscore'],
+    pathex=[],
     binaries=[],
     datas=[
         ('main.qml', '.'),
         ('projection.qml', '.'),
         ('media', 'media'),
-        ('/opt/homebrew/lib/python3.13/site-packages/PySide6/Qt/plugins/platforms', 'platforms'),
-        ('/opt/homebrew/lib/python3.13/site-packages/PySide6/Qt/plugins/multimedia', 'multimedia'),
-        ('/opt/homebrew/lib/python3.13/site-packages/PySide6/Qt/plugins/imageformats', 'imageformats'),
+        (normpath(join(pyside6_plugins_path, 'platforms')), 'platforms'),
+        (normpath(join(pyside6_plugins_path, 'multimedia')), 'multimedia'),
+        (normpath(join(pyside6_plugins_path, 'imageformats')), 'imageformats'),
     ],
     hiddenimports=[
         'serial',
