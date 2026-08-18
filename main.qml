@@ -37,6 +37,190 @@ Window {
     property bool receiveMode: false
     property string localIpAddress: "127.0.0.1"
 
+    FontLoader {
+        id: avenirLoader
+        source: "file:///Users/kady/Projects/Athletics Graphics and Typography/Typography/Avenir.ttc"
+    }
+
+    FontLoader {
+        id: serpentineLoader
+        source: "file:///Users/kady/Projects/Athletics Graphics and Typography/Typography/Serpentine BoldOblique.ttf"
+    }
+
+    // Brand design tokens
+    readonly property color brandForest: "#266726"
+    readonly property color brandForestDark: "#00492C"
+    readonly property color brandMoss: "#67963A"
+    readonly property color brandMossLight: "#CFE5B5"
+    readonly property color brandStone: "#72808A"
+    readonly property color brandCloud: "#FFFFFF"
+    readonly property color brandScreenGreen: "#00B612"
+    readonly property color brandDarkBg: "#111815"       // Very rich dark green-charcoal
+    readonly property color brandPanelBg: "#1A221E"      // Panel background
+    readonly property color brandInputBg: "#222C27"      // Input field background
+    readonly property string bodyFont: avenirLoader.name
+    readonly property string headingFont: avenirLoader.name
+    readonly property int defaultBoxHeight: 80
+
+    // Brand inline custom components
+    component BrandLabel : Label {
+        font.family: bodyFont
+        color: brandCloud
+        font.pixelSize: 14
+    }
+
+    component BrandButton : Button {
+        font.family: bodyFont
+        font.bold: true
+        font.pixelSize: 14
+        focusPolicy: Qt.StrongFocus
+        
+        contentItem: Text {
+            text: parent.text
+            font: parent.font
+            color: parent.down ? brandMossLight : (parent.checked ? brandScreenGreen : brandCloud)
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
+        
+        background: Rectangle {
+            color: parent.pressed || parent.checked ? brandForest : brandPanelBg
+            border.color: parent.hovered ? brandScreenGreen : brandStone
+            border.width: 1
+            radius: 4
+        }
+    }
+
+    component BrandTextField : TextField {
+        font.family: bodyFont
+        color: brandCloud
+        placeholderTextColor: brandStone
+        background: Rectangle {
+            color: brandInputBg
+            border.color: parent.activeFocus ? brandScreenGreen : brandStone
+            border.width: 1
+            radius: 4
+        }
+        onAccepted: focus = false
+    }
+
+    component BrandGroupBox : GroupBox {
+        id: rootGroupBox
+        font.family: headingFont
+        topPadding: title ? 34 : 10
+        bottomPadding: 10
+        leftPadding: 10
+        rightPadding: 10
+        
+        label: Label {
+            text: rootGroupBox.title
+            font.family: headingFont
+            font.weight: Font.Black
+            font.pixelSize: 14
+            color: brandScreenGreen
+            background: Rectangle { color: "transparent" }
+        }
+        
+        background: Rectangle {
+            y: rootGroupBox.topPadding - 10
+            width: rootGroupBox.width
+            height: rootGroupBox.height - y
+            color: brandPanelBg
+            border.color: brandStone
+            border.width: 1
+            radius: 6
+        }
+    }
+
+    component BrandSwitch : Switch {
+        id: controlSwitch
+        font.family: bodyFont
+        focusPolicy: Qt.StrongFocus
+        
+        indicator: Rectangle {
+            implicitWidth: 46
+            implicitHeight: 24
+            width: implicitWidth
+            height: implicitHeight
+            x: controlSwitch.leftPadding
+            y: controlSwitch.topPadding + controlSwitch.availableHeight / 2 - height / 2
+            radius: 12
+            color: controlSwitch.checked ? brandForest : brandPanelBg
+            border.color: controlSwitch.hovered ? brandScreenGreen : brandStone
+            border.width: 1
+
+            Rectangle {
+                x: controlSwitch.checked ? parent.width - width - 2 : 2
+                y: 2
+                width: 20
+                height: 20
+                radius: 10
+                color: controlSwitch.down ? brandMossLight : brandCloud
+                
+                Behavior on x {
+                    NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
+                }
+            }
+        }
+
+        contentItem: Text {
+            text: controlSwitch.text
+            font: controlSwitch.font
+            color: brandCloud
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: controlSwitch.text ? (controlSwitch.indicator.width + controlSwitch.spacing) : 0
+            visible: controlSwitch.text !== ""
+        }
+    }
+
+    component BrandComboBox : ComboBox {
+        id: rootComboBox
+        font.family: bodyFont
+        focusPolicy: Qt.StrongFocus
+        
+        contentItem: Text {
+            leftPadding: 8
+            rightPadding: (rootComboBox.indicator ? rootComboBox.indicator.width : 10) + rootComboBox.spacing
+            text: rootComboBox.displayText
+            font: rootComboBox.font
+            color: brandCloud
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+        
+        background: Rectangle {
+            implicitWidth: 120
+            implicitHeight: 32
+            color: brandInputBg
+            border.color: rootComboBox.hovered ? brandScreenGreen : brandStone
+            border.width: 1
+            radius: 4
+        }
+        
+        popup: Popup {
+            y: rootComboBox.height
+            width: rootComboBox.width
+            implicitHeight: contentItem.implicitHeight
+            padding: 1
+
+            contentItem: ListView {
+                clip: true
+                implicitHeight: contentHeight
+                model: rootComboBox.popup.visible ? rootComboBox.delegateModel : null
+                currentIndex: rootComboBox.highlightedIndex
+
+                ScrollIndicator.vertical: ScrollIndicator { }
+            }
+
+            background: Rectangle {
+                color: brandPanelBg
+                border.color: brandStone
+                border.width: 1
+                radius: 4
+            }
+        }
+    }
+
     function grabNextFrame() {
     // No-op: projection now renders its own independent copy of the scoreboard.
     }
@@ -774,31 +958,42 @@ Window {
         }
 
         Rectangle {
+            id: rightControlPanel
             width: 405
             height: 540
             anchors.right: parent.right
-            color: Application.styleHints.colorScheme === Qt.ColorScheme.Dark ? "#424242" : "white"
+            color: brandDarkBg
+            focus: true
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: rightControlPanel.forceActiveFocus()
+            }
 
             RowLayout {
                 id: topControlsRow
                 spacing: 16
+                height: 65
                 anchors {
                     left: parent.left
                     right: parent.right
                     top: parent.top
-                    margins: 16
+                    topMargin: 12
+                    leftMargin: 12
+                    rightMargin: 12
                 }
 
-                GroupBox {
+                BrandGroupBox {
                     id: controlModeGroup
                     title: "Control Mode"
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: 65
+                    Layout.fillWidth: true
                     rightPadding: 8
                     Column {
                         spacing: 4
                         Row {
                             spacing: 8
-                            Switch {
+                            BrandSwitch {
                                 id: manualSwitch
                                 objectName: "manualSwitch"
                                 implicitWidth: 46
@@ -815,24 +1010,25 @@ Window {
                                     }
                                 }
                             }
-                            Label {
+                            BrandLabel {
                                 id: modeText
                                 text: manualSwitch.checked ? "Manual" : "Automatic"
-                                font.pixelSize: 18
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
                 }
 
-                GroupBox {
+                BrandGroupBox {
                     title: "Operating Mode"
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: 65
                     Layout.fillWidth: true
                     Column {
                         spacing: 4
                         Row {
                             spacing: 8
-                            Switch {
+                            BrandSwitch {
                                 id: modeSwitch
                                 objectName: "modeSwitch"
                                 implicitWidth: 46
@@ -840,32 +1036,22 @@ Window {
                                 enabled: !manualSwitch.checked // Listen is only available in Automatic mode
                                 onToggled: appController.sendMode = checked
                             }
-                            Label {
+                            BrandLabel {
                                 id: modeLabel
                                 text: modeSwitch.checked ? "Send" : "Listen"
-                                font.pixelSize: 18
+                                font.pixelSize: 16
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
                 }
 
-                Button {
+                BrandButton {
                     id: settingsButton
                     checkable: true
                     checked: false
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: height
-                    Layout.rightMargin: -7
-                    Layout.bottomMargin: -6
-
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        color: "black"
-                        opacity: 0.1
-                        radius: 4
-                        visible: Application.styleHints.colorScheme !== Qt.ColorScheme.Dark
-                    }
+                    Layout.preferredHeight: 65
+                    Layout.preferredWidth: 65
 
                     Image {
                         source: "media/settings.svg"
@@ -877,9 +1063,8 @@ Window {
                 }
             }
 
-            Column {
-                id: controlPanel
-                objectName: "controlPanel"
+            ScrollView {
+                id: controlPanelScrollView
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
@@ -888,7 +1073,21 @@ Window {
                 anchors.leftMargin: 16
                 anchors.rightMargin: 16
                 anchors.bottomMargin: 16
-                spacing: 16
+                clip: true
+                focus: true
+
+                MouseArea {
+                    width: controlPanel.width
+                    height: Math.max(controlPanel.height, controlPanelScrollView.height)
+                    z: -1
+                    onClicked: rightControlPanel.forceActiveFocus()
+                }
+
+                Column {
+                    id: controlPanel
+                    objectName: "controlPanel"
+                    width: controlPanelScrollView.availableWidth
+                    spacing: 16
 
                 property int homeScore: 0
                 property int visitorScore: 0
@@ -1044,11 +1243,13 @@ Window {
 
                     RowLayout {
                         width: parent.width
+                        height: 95
                         spacing: 16
-                        GroupBox {
+                        BrandGroupBox {
                             title: "Network"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredWidth: 1
+                            Layout.preferredHeight: 95
 
                             StackLayout {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -1058,39 +1259,64 @@ Window {
 
                                 Column {
                                     spacing: 4
-                                    Label {
-                                        text: "Broadcasting to network from:"
+                                    BrandLabel {
+                                        text: "Broadcasting from:"
                                     }
-                                    Label {
+                                    BrandLabel {
                                         text: mainWindow.localIpAddress
                                         font.bold: true
                                     }
                                 }
                                 Column {
                                     spacing: 4
-                                    Label {
-                                        text: "Source IP Address"
+                                    Row {
+                                        spacing: 8
+                                        height: 20
+                                        BrandLabel {
+                                            text: "Source IP Address"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        Rectangle {
+                                            width: 10
+                                            height: 10
+                                            radius: 5
+                                            color: appController.isConnected ? "#00E676" : "#FF1744"
+                                            visible: !appController.sendMode && !manualSwitch.checked
+                                            anchors.verticalCenter: parent.verticalCenter
+
+                                            ToolTip.visible: mouseAreaStatus.containsMouse
+                                            ToolTip.text: appController.isConnected ? "UDP Connected" : "UDP Disconnected (No data received)"
+
+                                            MouseArea {
+                                                id: mouseAreaStatus
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                            }
+                                        }
                                     }
-                                    TextField {
+                                    BrandTextField {
                                         id: sourceIpInput
                                         objectName: "sourceIpInput"
                                         width: parent.width
                                         text: appController.sourceIp
-                                        placeholderText: "Leave empty to accept from any IP"
+                                        placeholderText: "Empty = Auto"
                                         onEditingFinished: appController.sourceIp = text
                                     }
                                 }
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             id: projectBox
                             title: "Project"
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 1
+                            Layout.preferredHeight: 95
 
-                            Button {
+                            BrandButton {
                                 id: projectButton
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 text: checked ? "Stop Projecting" : "Project"
                                 checkable: true
                                 checked: projectionController.is_projecting
@@ -1106,14 +1332,14 @@ Window {
                         }
                     }
 
-                    GroupBox {
+                    BrandGroupBox {
                         title: "Team Names"
                         width: parent.width
                         visible: appController.isWrestlingMode && manualSwitch.checked
                         Column {
                             width: parent.width
                             spacing: 8
-                            TextField {
+                            BrandTextField {
                                 placeholderText: "Home Name"
                                 text: appController.homeName
                                 onTextChanged: {
@@ -1124,7 +1350,7 @@ Window {
                                 }
                                 width: parent.width
                             }
-                            TextField {
+                            BrandTextField {
                                 placeholderText: "Away Name"
                                 text: appController.opponentName
                                 onTextChanged: {
@@ -1138,7 +1364,7 @@ Window {
                         }
                     }
 
-                    GroupBox {
+                    BrandGroupBox {
                         title: "Clock"
                         width: parent.width
                         visible: manualSwitch.checked && !appController.isWrestlingMode
@@ -1147,7 +1373,7 @@ Window {
                             spacing: 8
                             Row {
                                 spacing: 8
-                                TextField {
+                                BrandTextField {
                                     id: clockMinutesInput
                                     width: 60
                                     placeholderText: "MM"
@@ -1161,10 +1387,11 @@ Window {
                                         controlPanel.clockTimeInTenths = (parseInt(text) * 60 + parseInt(clockSecondsInput.text)) * 10;
                                     }
                                 }
-                                Label {
+                                BrandLabel {
                                     text: ":"
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
-                                TextField {
+                                BrandTextField {
                                     id: clockSecondsInput
                                     width: 60
                                     placeholderText: "SS"
@@ -1178,7 +1405,7 @@ Window {
                                         controlPanel.clockTimeInTenths = (parseInt(clockMinutesInput.text) * 60 + parseInt(text)) * 10;
                                     }
                                 }
-                                Button {
+                                BrandButton {
                                     id: startStopButton
                                     text: controlPanel.clockRunning ? "Stop" : "Start"
                                     onClicked: {
@@ -1192,15 +1419,16 @@ Window {
                             }
                             Row {
                                 spacing: 8
-                                Switch {
+                                BrandSwitch {
                                     id: countDownSwitch
                                     implicitWidth: 46
                                     implicitHeight: 24
                                     checked: true // Default to count down
                                     enabled: !controlPanel.clockRunning
                                 }
-                                Label {
+                                BrandLabel {
                                     text: countDownSwitch.checked ? "Counting Down" : "Counting Up"
+                                    anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
                         }
@@ -1212,10 +1440,10 @@ Window {
                         columnSpacing: 16
                         rowSpacing: 4
 
-                        GroupBox {
+                        BrandGroupBox {
                             title: appController.homeScoreLabel
                             Layout.fillWidth: true
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
@@ -1223,7 +1451,7 @@ Window {
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
@@ -1231,7 +1459,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
@@ -1239,7 +1467,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
@@ -1251,10 +1479,10 @@ Window {
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             title: appController.awayScoreLabel
                             Layout.fillWidth: true
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
@@ -1262,7 +1490,7 @@ Window {
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
@@ -1270,7 +1498,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
@@ -1278,7 +1506,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
@@ -1290,11 +1518,11 @@ Window {
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             id: homeFoulsBox
                             title: appController.homeFoulsLabel
                             Layout.fillWidth: true
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
@@ -1302,7 +1530,7 @@ Window {
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
@@ -1310,7 +1538,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
@@ -1318,7 +1546,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
@@ -1330,11 +1558,11 @@ Window {
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             id: visitorFoulsBox
                             title: appController.awayFoulsLabel
                             Layout.fillWidth: true
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
@@ -1342,7 +1570,7 @@ Window {
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▲"
                                         onClicked: {
@@ -1350,7 +1578,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
@@ -1358,7 +1586,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
@@ -1370,11 +1598,11 @@ Window {
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             title: "Period"
                             Layout.fillWidth: true
                             Layout.columnSpan: 1
-                            Layout.preferredHeight: projectBox.implicitHeight
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
@@ -1382,7 +1610,7 @@ Window {
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
-                                    Button {
+                                    BrandButton {
                                         id: periodButton
                                         Layout.preferredWidth: 40
                                         text: "▲"
@@ -1391,7 +1619,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "▼"
                                         onClicked: {
@@ -1399,7 +1627,7 @@ Window {
                                             appController.sendManualUpdate();
                                         }
                                     }
-                                    Button {
+                                    BrandButton {
                                         Layout.preferredWidth: 40
                                         text: "⟲"
                                         onClicked: {
@@ -1411,11 +1639,12 @@ Window {
                             }
                         }
 
-                        GroupBox {
+                        BrandGroupBox {
                             title: "Weight Class"
                             Layout.fillWidth: true
+                            Layout.preferredHeight: defaultBoxHeight
                             visible: appController.isWrestlingMode && manualSwitch.checked
-                            TextField {
+                            BrandTextField {
                                 id: weightClassInput
                                 placeholderText: "Enter weight class"
                                 text: appController.weightClass
@@ -1457,12 +1686,14 @@ Window {
                         spacing: 16
                         Row {
                             spacing: 8
-                            Label {
+                            BrandLabel {
                                 text: "Home Color"
                                 font.pixelSize: 18
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Button {
+                            BrandButton {
                                 text: "Select"
+                                font.pixelSize: 14
                                 onClicked: {
                                     homeColorDialog.open();
                                 }
@@ -1470,12 +1701,14 @@ Window {
                         }
                         Row {
                             spacing: 8
-                            Label {
+                            BrandLabel {
                                 text: "Home Logo"
                                 font.pixelSize: 18
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Button {
+                            BrandButton {
                                 text: "Select"
+                                font.pixelSize: 14
                                 onClicked: {
                                     homeLogoDialog.open();
                                 }
@@ -1486,12 +1719,14 @@ Window {
                         spacing: 16
                         Row {
                             spacing: 8
-                            Label {
+                            BrandLabel {
                                 text: "Away Color"
                                 font.pixelSize: 18
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Button {
+                            BrandButton {
                                 text: "Select"
+                                font.pixelSize: 14
                                 onClicked: {
                                     colorDialog.open();
                                 }
@@ -1499,12 +1734,14 @@ Window {
                         }
                         Row {
                             spacing: 8
-                            Label {
+                            BrandLabel {
                                 text: "Away Logo"
                                 font.pixelSize: 18
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Button {
+                            BrandButton {
                                 text: "Select"
+                                font.pixelSize: 14
                                 onClicked: {
                                     opponentLogoDialog.open();
                                 }
@@ -1516,16 +1753,17 @@ Window {
                         Item {
                             width: childrenRect.width
                             height: homeNameInput.height
-                            Label {
+                            BrandLabel {
                                 text: "Home Name"
                                 font.pixelSize: 18
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
-                        TextField {
+                        BrandTextField {
                             id: homeNameInput
                             placeholderText: "Enter Home Name"
                             text: appController.homeName
+                            font.pixelSize: 16
                             onTextChanged: {
                                 if (appController.homeName !== text) {
                                     appController.homeName = text;
@@ -1536,7 +1774,7 @@ Window {
                         Item {
                             width: localNamesSwitch.width
                             height: homeNameInput.height
-                            Switch {
+                            BrandSwitch {
                                 id: localNamesSwitch
                                 implicitWidth: 46
                                 implicitHeight: 24
@@ -1545,7 +1783,7 @@ Window {
                                 anchors.centerIn: parent
                             }
                         }
-                        Label {
+                        BrandLabel {
                             text: "Local"
                             font.pixelSize: 18
                             anchors.verticalCenter: parent.verticalCenter
@@ -1553,14 +1791,16 @@ Window {
                     }
                     Row {
                         spacing: 8
-                        Label {
+                        BrandLabel {
                             text: "Away Name"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
-                        TextField {
+                        BrandTextField {
                             id: opponentNameInput
                             placeholderText: "Enter Opponent Name"
                             text: appController.opponentName
+                            font.pixelSize: 16
                             onTextChanged: {
                                 if (appController.opponentName !== text) {
                                     appController.opponentName = text;
@@ -1571,12 +1811,14 @@ Window {
                     }
                     Row {
                         spacing: 8
-                        Label {
+                        BrandLabel {
                             text: "Team Name Font"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
-                        Button {
+                        BrandButton {
                             text: "Select"
+                            font.pixelSize: 14
                             onClicked: {
                                 fontDialog.open();
                             }
@@ -1584,53 +1826,57 @@ Window {
                     }
                     Row {
                         spacing: 8
-                        Switch {
+                        BrandSwitch {
                             id: shotClockSwitch
                             implicitWidth: 46
                             implicitHeight: 24
                             checked: appController.shotClock
                             onToggled: appController.shotClock = checked
                         }
-                        Label {
+                        BrandLabel {
                             text: "Shot Clock"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Row {
                         spacing: 8
-                        Switch {
+                        BrandSwitch {
                             id: showFoulsSwitch
                             implicitWidth: 46
                             implicitHeight: 24
                             checked: appController.showFouls
                             onToggled: appController.showFouls = checked
                         }
-                        Label {
+                        BrandLabel {
                             text: "Show Fouls/Sets/Team Score"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Row {
                         spacing: 8
-                        Switch {
+                        BrandSwitch {
                             id: logoSwitch
                             implicitWidth: 46
                             implicitHeight: 24
                             checked: appController.logo
                             onToggled: appController.logo = checked
                         }
-                        Label {
+                        BrandLabel {
                             text: logoSwitch.checked ? "UEN Logo" : "Mascot Logo"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     Row {
                         spacing: 8
-                        Label {
+                        BrandLabel {
                             text: "Sport Mode"
                             font.pixelSize: 18
+                            anchors.verticalCenter: parent.verticalCenter
                         }
-                        ComboBox {
+                        BrandComboBox {
                             id: backgroundSelector
                             model: ["Volleyball", "Basketball", "Wrestling"]
                             font.pixelSize: 18
@@ -1638,9 +1884,10 @@ Window {
                             onActivated: appController.background = currentIndex
                         }
                     }
+
                     Row {
                         spacing: 8
-                        Button {
+                        BrandButton {
                             text: "Clear Graphics"
                             font.pixelSize: 18
                             onClicked: appController.clearGraphics()
@@ -1650,4 +1897,5 @@ Window {
             }
         }
     }
+}
 }

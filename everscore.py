@@ -20,6 +20,7 @@ import socket
 import subprocess
 import sys
 import threading
+import uuid
 from typing import Any
 
 import serial.tools.list_ports
@@ -38,11 +39,34 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider, QQuickItem
+from PySide6.QtQuickControls2 import QQuickStyle
 
 
 # Event to signal shutdown to background threads
 _shutdown_event = threading.Event()
 _main_window: QObject | None = None
+
+# Global session variables for network resilience & security
+_sender_session_id = str(uuid.uuid4())[:8]
+_sender_seq = 0
+_sender_seq_lock = threading.Lock()
+_last_received_packets = {}  # maps ip_addr -> (session_id, last_seq, last_timestamp)
+
+
+def prepare_packet(state: dict) -> bytes:
+    """Prepares the packet by adding session_id, seq, and timestamp."""
+    global _sender_seq
+    packet = state.copy()
+    
+    with _sender_seq_lock:
+        seq = _sender_seq
+        _sender_seq += 1
+        
+    packet["session_id"] = _sender_session_id
+    packet["seq"] = seq
+    packet["timestamp"] = time.time()
+    
+    return json.dumps(packet).encode('utf-8')
 
 
 def no_op(*args, **kwargs):
@@ -308,7 +332,35 @@ class AppController(QObject):
         self._is_wrestling_mode = False
         self._update_labels_for_sport(self.background)
 
+        self._is_connected = False
+        self._last_packet_time = 0.0
+
+        self._conn_timer = QTimer(self)
+        self._conn_timer.setInterval(1000)  # Check every 1 second
+        self._conn_timer.timeout.connect(self._check_connection_timeout)
+        self._conn_timer.start()
+
+    def _check_connection_timeout(self):
+        if time.time() - self._last_packet_time > 3.0:
+            if self._is_connected:
+                self._is_connected = False
+                self._isConnectedChanged.emit()
+
+    def register_packet_received(self):
+        self._last_packet_time = time.time()
+        if not self._is_connected:
+            self._is_connected = True
+            self._isConnectedChanged.emit()
+
     # --- Settings Properties ---
+
+
+
+    _isConnectedChanged = Signal()
+
+    @Property(bool, notify=_isConnectedChanged)
+    def isConnected(self):
+        return self._is_connected
 
     _homeColorChanged = Signal()
 
@@ -578,7 +630,8 @@ class AppController(QObject):
         state = self._build_state_from_qml()
         if state and not _shutdown_event.is_set():
             try:
-                self._udp_sock.sendto(json.dumps(state).encode(), self._dest_addr)
+                payload = prepare_packet(state)
+                self._udp_sock.sendto(payload, self._dest_addr)
             except OSError as e:
                 print(f"⚠️  Failed to send manual update: {e}")
 
@@ -788,6 +841,7 @@ def main() -> None:
     # Initialise Qt/QML scene
     # --------------------------------------------------------------------- #
     app = QGuiApplication(sys.argv)
+    QQuickStyle.setStyle("Basic")
     if activity_value:
         # Keep the activity object alive for the duration of the app
         app.setProperty("appNapActivity", activity_value)
@@ -851,7 +905,8 @@ def main() -> None:
 
         if not _shutdown_event.is_set():
             try:
-                udp_sock.sendto(json.dumps(data).encode(), dest_addr)
+                payload = prepare_packet(data)
+                udp_sock.sendto(payload, dest_addr)
             except OSError as e:
                 if not _shutdown_event.is_set():
                     print(f"⚠️  Failed to send UDP packet: {e}")
@@ -870,8 +925,31 @@ def main() -> None:
             return
         try:
             state = json.loads(payload_str)
-            if isinstance(state, dict):
-                score_updater.updateScore.emit(state)
+            if not isinstance(state, dict):
+                return
+
+            # 1. Sequence / Ordering Verification for resilience (out-of-order & duplicate protection)
+            session_id = state.get("session_id")
+            seq = state.get("seq")
+
+            if session_id is not None and seq is not None:
+                last_session, last_seq, last_time = _last_received_packets.get(ip_addr, (None, -1, 0.0))
+                if session_id == last_session:
+                    if seq <= last_seq:
+                        # Out-of-order or duplicate packet, silently discard
+                        return
+                else:
+                    # Session restarted
+                    print(f"🔌 Established session with sender at {ip_addr} (session: {session_id})")
+
+                _last_received_packets[ip_addr] = (session_id, seq, time.time())
+
+            # 2. Mark packet as received for UI connection indicator
+            app_controller.register_packet_received()
+
+            # 3. Dispatch update
+            score_updater.updateScore.emit(state)
+
         except json.JSONDecodeError:
             print("⚠️  Received invalid JSON packet, ignoring.")
 
@@ -882,21 +960,24 @@ def main() -> None:
     serial_manager.data_received.connect(handle_serial_data)
 
     def serial_thread_target():
-        port = find_serial_port()
-        if not port:
-            print("ℹ️ No Prolific serial port found. Serial input will be disabled.")
-            return
+        while not _shutdown_event.is_set():
+            port = find_serial_port()
+            if not port:
+                time.sleep(2.0)
+                continue
 
-        print(f"🔌 Attempting to open scoreboard serial port: {port}")
-        try:
-            basketball = Basketball(port)
-            basketball.on_update = serial_manager.data_received.emit
-            # Block and read from the serial port until shutdown
-            basketball.export()
-        except Exception as e:
-            print(
-                f"❌ Serial port thread failed: {e}. Serial functionality will be disabled."
-            )
+            print(f"🔌 Attempting to open scoreboard serial port: {port}")
+            try:
+                basketball = Basketball(port)
+                basketball.on_update = serial_manager.data_received.emit
+                # Block and read from the serial port until shutdown or disconnection
+                basketball.export()
+            except Exception as e:
+                if not _shutdown_event.is_set():
+                    print(f"❌ Serial port disconnected or failed: {e}. Retrying in 2 seconds...")
+
+            if not _shutdown_event.is_set():
+                time.sleep(2.0)
         print("Serial thread finished.")
 
     threading.Thread(target=serial_thread_target, daemon=True).start()
