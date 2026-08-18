@@ -11,6 +11,12 @@ Window {
 
     property var controller_prop: null
 
+    // Bundled fallback (SIL OFL): used when no team-name font has been chosen
+    FontLoader {
+        id: fallbackFontLoader
+        source: "media/fonts/NotoSans-Regular.ttf"
+    }
+
     onClosing: {
         if (controller_prop) {
             controller_prop.onProjectionWindowClosed();
@@ -330,7 +336,7 @@ Window {
                 Text {
                     text: appController.fontFamily.toLowerCase().includes("serpentine")
                           ? appController.homeName.toLowerCase() : appController.homeName
-                    font.family: appController.fontFamily
+                    font.family: appController.fontFamily !== "" ? appController.fontFamily : fallbackFontLoader.name
                     anchors.fill: parent
                     anchors.leftMargin: 50
                     anchors.rightMargin: 50
@@ -350,7 +356,7 @@ Window {
                 Text {
                     text: appController.fontFamily.toLowerCase().includes("serpentine")
                           ? appController.opponentName.toLowerCase() : appController.opponentName
-                    font.family: appController.fontFamily
+                    font.family: appController.fontFamily !== "" ? appController.fontFamily : fallbackFontLoader.name
                     anchors.fill: parent
                     anchors.leftMargin: 50
                     anchors.rightMargin: 50

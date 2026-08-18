@@ -47,6 +47,21 @@ Window {
         source: "file:///Users/kady/Projects/Athletics Graphics and Typography/Typography/Serpentine BoldOblique.ttf"
     }
 
+    // Bundled fallback (SIL OFL): used when the local Avenir files are absent
+    FontLoader {
+        id: notoLoader
+        source: "media/fonts/NotoSans-Regular.ttf"
+    }
+    FontLoader {
+        source: "media/fonts/NotoSans-Bold.ttf"
+    }
+    FontLoader {
+        source: "media/fonts/NotoSans-Black.ttf"
+    }
+    FontLoader {
+        source: "media/fonts/NotoSans-Italic.ttf"
+    }
+
     // Brand design tokens
     readonly property color brandForest: "#266726"
     readonly property color brandForestDark: "#00492C"
@@ -58,8 +73,8 @@ Window {
     readonly property color brandDarkBg: "#111815"       // Very rich dark green-charcoal
     readonly property color brandPanelBg: "#1A221E"      // Panel background
     readonly property color brandInputBg: "#222C27"      // Input field background
-    readonly property string bodyFont: avenirLoader.name
-    readonly property string headingFont: avenirLoader.name
+    readonly property string bodyFont: avenirLoader.status === FontLoader.Ready ? avenirLoader.name : notoLoader.name
+    readonly property string headingFont: bodyFont
     readonly property int defaultBoxHeight: 64
 
     // Brand inline custom components
@@ -914,7 +929,7 @@ Window {
                         Text {
                             id: homeNameText
                             text: appController.fontFamily.toLowerCase().includes("serpentine") ? appController.homeName.toLowerCase() : appController.homeName
-                            font.family: appController.fontFamily
+                            font.family: appController.fontFamily !== "" ? appController.fontFamily : bodyFont
                             anchors.fill: parent
                             anchors.leftMargin: 50
                             anchors.rightMargin: 50
@@ -938,7 +953,7 @@ Window {
                         Text {
                             id: opponentNameText
                             text: appController.fontFamily.toLowerCase().includes("serpentine") ? appController.opponentName.toLowerCase() : appController.opponentName
-                            font.family: appController.fontFamily
+                            font.family: appController.fontFamily !== "" ? appController.fontFamily : bodyFont
                             anchors.fill: parent
                             anchors.leftMargin: 50
                             anchors.rightMargin: 50
