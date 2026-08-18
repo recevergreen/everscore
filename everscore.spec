@@ -3,6 +3,7 @@
 # This is a PyInstaller spec file for macOS.
 
 from PySide6.QtCore import QCoreApplication
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 from os.path import join, normpath
 
 block_cipher = None
@@ -16,7 +17,8 @@ for path in QCoreApplication.libraryPaths():
 a = Analysis(
     ['everscore.py'],
     pathex=[],
-    binaries=[],
+    # Bundle the NDI runtime (libndi.dylib) shipped inside the cyndilib wheel
+    binaries=collect_dynamic_libs('cyndilib'),
     datas=[
         ('main.qml', '.'),
         ('projection.qml', '.'),
@@ -41,6 +43,9 @@ a = Analysis(
         'PySide6.QtWidgets',
         'PySide6.QtQuick.Controls',
         'PySide6.QtQuick.Layouts',
+        # Cython submodules import siblings at C level, invisible to
+        # static analysis — collect every cyndilib submodule.
+        *collect_submodules('cyndilib'),
     ],
     hookspath=[],
     runtime_hooks=[],

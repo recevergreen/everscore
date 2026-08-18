@@ -74,7 +74,7 @@ Window {
         font.bold: true
         font.pixelSize: 14
         focusPolicy: Qt.StrongFocus
-        
+
         contentItem: Text {
             text: parent.text
             font: parent.font
@@ -82,7 +82,7 @@ Window {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
         }
-        
+
         background: Rectangle {
             color: parent.pressed || parent.checked ? brandForest : brandPanelBg
             border.color: parent.hovered ? brandScreenGreen : brandStone
@@ -111,7 +111,7 @@ Window {
         bottomPadding: 10
         leftPadding: 10
         rightPadding: 10
-        
+
         label: Label {
             text: rootGroupBox.title
             font.family: headingFont
@@ -120,7 +120,7 @@ Window {
             color: brandScreenGreen
             background: Rectangle { color: "transparent" }
         }
-        
+
         background: Rectangle {
             y: rootGroupBox.topPadding - 10
             width: rootGroupBox.width
@@ -136,7 +136,7 @@ Window {
         id: controlSwitch
         font.family: bodyFont
         focusPolicy: Qt.StrongFocus
-        
+
         indicator: Rectangle {
             implicitWidth: 46
             implicitHeight: 24
@@ -156,7 +156,7 @@ Window {
                 height: 20
                 radius: 10
                 color: controlSwitch.down ? brandMossLight : brandCloud
-                
+
                 Behavior on x {
                     NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
                 }
@@ -177,7 +177,7 @@ Window {
         id: rootComboBox
         font.family: bodyFont
         focusPolicy: Qt.StrongFocus
-        
+
         contentItem: Text {
             leftPadding: 8
             rightPadding: (rootComboBox.indicator ? rootComboBox.indicator.width : 10) + rootComboBox.spacing
@@ -187,7 +187,7 @@ Window {
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
-        
+
         background: Rectangle {
             implicitWidth: 120
             implicitHeight: 32
@@ -196,7 +196,7 @@ Window {
             border.width: 1
             radius: 4
         }
-        
+
         popup: Popup {
             y: rootComboBox.height
             width: rootComboBox.width
@@ -1313,20 +1313,43 @@ Window {
                             Layout.preferredWidth: 1
                             Layout.preferredHeight: 95
 
-                            BrandButton {
-                                id: projectButton
+                            Row {
                                 width: parent.width
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: checked ? "Stop Projecting" : "Project"
-                                checkable: true
-                                checked: projectionController.is_projecting
-                                onClicked: projectionController.toggleProjection(checked)
+                                spacing: 8
+
+                                BrandButton {
+                                    id: projectButton
+                                    width: (parent.width - parent.spacing) / 2
+                                    text: checked ? "Stop" : "Project"
+                                    checkable: true
+                                    checked: projectionController.is_projecting
+                                    onClicked: projectionController.toggleProjection(checked)
+                                }
+
+                                BrandButton {
+                                    id: ndiButton
+                                    objectName: "ndiButton"
+                                    width: (parent.width - parent.spacing) / 2
+                                    text: checked ? "Stop" : "NDI"
+                                    checkable: true
+                                    enabled: ndiController.is_available
+                                    checked: ndiController.is_streaming
+                                    onClicked: ndiController.toggleNdi(checked)
+                                }
                             }
 
                             Connections {
                                 target: projectionController
                                 function onProjectionChanged() {
                                     projectButton.checked = projectionController.is_projecting;
+                                }
+                            }
+
+                            Connections {
+                                target: ndiController
+                                function onNdiChanged() {
+                                    ndiButton.checked = ndiController.is_streaming;
                                 }
                             }
                         }

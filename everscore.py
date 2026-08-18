@@ -23,6 +23,8 @@ import threading
 import uuid
 from typing import Any
 
+from fractions import Fraction
+
 import serial.tools.list_ports
 from consoles.sports import Basketball
 from PySide6.QtCore import (
@@ -40,6 +42,15 @@ from PySide6.QtGui import QCloseEvent, QGuiApplication, QImage, QScreen
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider, QQuickItem
 from PySide6.QtQuickControls2 import QQuickStyle
+
+try:
+    from cyndilib.sender import Sender as NdiSender
+    from cyndilib.video_frame import VideoSendFrame
+    from cyndilib.wrapper.ndi_structs import FourCC
+    NDI_AVAILABLE = True
+except ImportError as e:
+    NDI_AVAILABLE = False
+    print(f"⚠️  NDI disabled: cyndilib not available ({e})", flush=True)
 
 
 # Event to signal shutdown to background threads
@@ -308,6 +319,192 @@ class ProjectionController(QObject):
             if self._projection_window:
                 self.closeRequested.emit()
                 self._projection_window = None
+
+
+class NdiController(QObject):
+    """Streams the scoreboard viewport as an NDI video source.
+
+    Frames are grabbed from the 'viewportToStream' QML item on the GUI
+    thread (grabToImage renders asynchronously via the scene graph), then
+    handed to a worker thread that feeds the NDI sender, so SpeedHQ
+    compression never blocks the UI.
+    """
+
+    ndiChanged = Signal()
+
+    NDI_SOURCE_NAME = "Everscore"
+    FRAME_WIDTH = 1920
+    FRAME_HEIGHT = 1080
+    FRAME_RATE = 30
+
+    def __init__(self, parent: QObject | None = None):
+        super().__init__(parent)
+        self._is_streaming = False
+        self._sender = None
+        self._viewport: QQuickItem | None = None
+        self._grab_result = None
+        self._frame_ready = threading.Condition()
+        self._pending_frame: bytearray | None = None
+        self._worker: threading.Thread | None = None
+        self._worker_stop = False
+        self._send_error_logged = False
+
+        self._capture_timer = QTimer(self)
+        self._capture_timer.setInterval(1000 // self.FRAME_RATE)
+        self._capture_timer.timeout.connect(self._capture_frame)
+
+    @Property(bool, constant=True)
+    def is_available(self) -> bool:
+        return NDI_AVAILABLE
+
+    @Property(bool, notify=ndiChanged)
+    def is_streaming(self) -> bool:
+        return self._is_streaming
+
+    @Slot(bool)
+    def toggleNdi(self, checked: bool):
+        if checked:
+            self._start()
+        else:
+            self._stop()
+
+    def _start(self):
+        if self._is_streaming:
+            return
+
+        if not NDI_AVAILABLE:
+            print("⚠️  NDI streaming unavailable: cyndilib is not installed.")
+            self.ndiChanged.emit()
+            return
+
+        viewport = None
+        if _main_window:
+            viewport = _main_window.findChild(QQuickItem, "viewportToStream")
+        if viewport is None:
+            print("❌ NDI: could not find 'viewportToStream' in QML.")
+            self.ndiChanged.emit()
+            return
+
+        try:
+            sender = NdiSender(self.NDI_SOURCE_NAME)
+            frame = VideoSendFrame()
+            frame.set_resolution(self.FRAME_WIDTH, self.FRAME_HEIGHT)
+            frame.set_frame_rate(Fraction(self.FRAME_RATE, 1))
+            frame.set_fourcc(FourCC.BGRX)
+            sender.set_video_frame(frame)
+            sender.open()
+        except Exception as e:
+            print(f"❌ NDI: failed to start sender: {e}")
+            self.ndiChanged.emit()
+            return
+
+        self._sender = sender
+        self._viewport = viewport
+        self._pending_frame = None
+        self._worker_stop = False
+        self._send_error_logged = False
+        self._worker = threading.Thread(target=self._send_loop, daemon=True)
+        self._worker.start()
+        self._capture_timer.start()
+
+        self._is_streaming = True
+        self.ndiChanged.emit()
+        print(f"📺 NDI: streaming viewport as '{self.NDI_SOURCE_NAME}'")
+
+    def _stop(self):
+        if not self._is_streaming:
+            return
+
+        self._capture_timer.stop()
+        self._is_streaming = False
+
+        with self._frame_ready:
+            self._worker_stop = True
+            self._frame_ready.notify_all()
+        if self._worker:
+            self._worker.join(timeout=2.0)
+            self._worker = None
+
+        self._grab_result = None
+        self._viewport = None
+        if self._sender:
+            try:
+                self._sender.close()
+            except Exception as e:
+                print(f"⚠️  NDI: error closing sender: {e}")
+            self._sender = None
+
+        self.ndiChanged.emit()
+        print("📺 NDI: streaming stopped")
+
+    def _capture_frame(self):
+        # Skip this tick if the previous grab hasn't completed yet.
+        if self._grab_result is not None or self._viewport is None:
+            return
+        result = self._viewport.grabToImage(
+            QSize(self.FRAME_WIDTH, self.FRAME_HEIGHT)
+        )
+        if result is None:
+            return
+        self._grab_result = result
+        result.ready.connect(self._on_grab_ready)
+
+    def _on_grab_ready(self):
+        result = self._grab_result
+        self._grab_result = None
+        if result is None or not self._is_streaming:
+            return
+
+        image: QImage = result.image()
+        if image.isNull():
+            return
+
+        # ARGB32 variants are B,G,R,A in memory on little-endian, matching
+        # the BGRX FourCC. Alpha is ignored, so premultiplied is fine as-is.
+        if image.format() not in (
+            QImage.Format.Format_ARGB32,
+            QImage.Format.Format_ARGB32_Premultiplied,
+            QImage.Format.Format_RGB32,
+        ):
+            image = image.convertToFormat(QImage.Format.Format_ARGB32)
+        if (
+            image.width() != self.FRAME_WIDTH
+            or image.height() != self.FRAME_HEIGHT
+        ):
+            image = image.scaled(self.FRAME_WIDTH, self.FRAME_HEIGHT)
+
+        row_bytes = self.FRAME_WIDTH * 4
+        buf = image.constBits()
+        if image.bytesPerLine() == row_bytes:
+            data = bytearray(buf[: row_bytes * self.FRAME_HEIGHT])
+        else:
+            stride = image.bytesPerLine()
+            data = bytearray(
+                b"".join(
+                    buf[r * stride : r * stride + row_bytes]
+                    for r in range(self.FRAME_HEIGHT)
+                )
+            )
+
+        with self._frame_ready:
+            self._pending_frame = data
+            self._frame_ready.notify_all()
+
+    def _send_loop(self):
+        while True:
+            with self._frame_ready:
+                while self._pending_frame is None and not self._worker_stop:
+                    self._frame_ready.wait()
+                if self._worker_stop:
+                    return
+                frame = self._pending_frame
+                self._pending_frame = None
+            try:
+                self._sender.write_video(frame)
+            except Exception as e:
+                if not self._send_error_logged:
+                    self._send_error_logged = True
+                    print(f"⚠️  NDI: failed to send frame: {e}")
 
 
 class AppController(QObject):
@@ -855,6 +1052,10 @@ def main() -> None:
     engine.rootContext().setContextProperty(
         "projectionController", projection_controller
     )
+
+    ndi_controller = NdiController()
+    engine.rootContext().setContextProperty("ndiController", ndi_controller)
+    print(f"📺 NDI support available: {NDI_AVAILABLE}", flush=True)
 
     # Resolve path to QML file for PyInstaller
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
