@@ -60,7 +60,7 @@ Window {
     readonly property color brandInputBg: "#222C27"      // Input field background
     readonly property string bodyFont: avenirLoader.name
     readonly property string headingFont: avenirLoader.name
-    readonly property int defaultBoxHeight: 80
+    readonly property int defaultBoxHeight: 64
 
     // Brand inline custom components
     component BrandLabel : Label {
@@ -1470,12 +1470,14 @@ Window {
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", controlPanel.homeScore + 1);
@@ -1484,6 +1486,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", controlPanel.homeScore - 1);
@@ -1492,6 +1495,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("home", 0);
@@ -1509,12 +1513,14 @@ Window {
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", controlPanel.visitorScore + 1);
@@ -1523,6 +1529,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", controlPanel.visitorScore - 1);
@@ -1531,6 +1538,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setScoreDigits("visitor", 0);
@@ -1549,12 +1557,14 @@ Window {
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", controlPanel.homeFouls + 1);
@@ -1563,6 +1573,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", controlPanel.homeFouls - 1);
@@ -1571,6 +1582,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("home", 0);
@@ -1589,12 +1601,14 @@ Window {
                             visible: manualSwitch.checked && showFoulsSwitch.checked
                             Column {
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls + 1);
@@ -1603,6 +1617,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", controlPanel.visitorFouls - 1);
@@ -1611,6 +1626,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setFoulDigits("visitor", 0);
@@ -1629,6 +1645,7 @@ Window {
                             visible: manualSwitch.checked
                             Column {
                                 width: parent.width
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
                                 RowLayout {
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -1636,6 +1653,7 @@ Window {
                                     BrandButton {
                                         id: periodButton
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▲"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(controlPanel.period + 1);
@@ -1644,6 +1662,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "▼"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(controlPanel.period - 1);
@@ -1652,6 +1671,7 @@ Window {
                                     }
                                     BrandButton {
                                         Layout.preferredWidth: 40
+                                        Layout.preferredHeight: 26
                                         text: "⟲"
                                         onClicked: {
                                             controlPanel.setPeriodDigit(1);
