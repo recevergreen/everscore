@@ -67,12 +67,13 @@ Window {
     readonly property color brandForestDark: "#00492C"
     readonly property color brandMoss: "#67963A"
     readonly property color brandMossLight: "#CFE5B5"
-    readonly property color brandStone: "#72808A"
+    readonly property color brandStone: "#9AA5A0"
     readonly property color brandCloud: "#FFFFFF"
     readonly property color brandScreenGreen: "#00B612"
-    readonly property color brandDarkBg: "#111815"       // Very rich dark green-charcoal
-    readonly property color brandPanelBg: "#1A221E"      // Panel background
-    readonly property color brandInputBg: "#222C27"      // Input field background
+    readonly property color brandInk: "#3A3F3D"          // Primary text: dark gray
+    readonly property color brandDarkBg: "#EDF0EE"       // Panel area background: soft off-white
+    readonly property color brandPanelBg: "#FFFFFF"      // Card background
+    readonly property color brandInputBg: "#F4F6F5"      // Input field background
     readonly property string bodyFont: avenirLoader.status === FontLoader.Ready ? avenirLoader.name : notoLoader.name
     readonly property string headingFont: bodyFont
     readonly property int defaultBoxHeight: 64
@@ -80,7 +81,7 @@ Window {
     // Brand inline custom components
     component BrandLabel : Label {
         font.family: bodyFont
-        color: brandCloud
+        color: brandInk
         font.pixelSize: 14
     }
 
@@ -93,14 +94,14 @@ Window {
         contentItem: Text {
             text: parent.text
             font: parent.font
-            color: parent.down ? brandMossLight : (parent.checked ? brandScreenGreen : brandCloud)
+            color: (parent.down || parent.checked) ? brandCloud : brandInk
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
         }
 
         background: Rectangle {
             color: parent.pressed || parent.checked ? brandForest : brandPanelBg
-            border.color: parent.hovered ? brandScreenGreen : brandStone
+            border.color: parent.hovered ? brandForest : brandStone
             border.width: 1
             radius: 4
         }
@@ -108,11 +109,11 @@ Window {
 
     component BrandTextField : TextField {
         font.family: bodyFont
-        color: brandCloud
+        color: brandInk
         placeholderTextColor: brandStone
         background: Rectangle {
             color: brandInputBg
-            border.color: parent.activeFocus ? brandScreenGreen : brandStone
+            border.color: parent.activeFocus ? brandForest : brandStone
             border.width: 1
             radius: 4
         }
@@ -132,7 +133,7 @@ Window {
             font.family: headingFont
             font.weight: Font.Black
             font.pixelSize: 14
-            color: brandScreenGreen
+            color: brandInk
             background: Rectangle { color: "transparent" }
         }
 
@@ -161,7 +162,7 @@ Window {
             y: controlSwitch.topPadding + controlSwitch.availableHeight / 2 - height / 2
             radius: 12
             color: controlSwitch.checked ? brandForest : brandPanelBg
-            border.color: controlSwitch.hovered ? brandScreenGreen : brandStone
+            border.color: controlSwitch.hovered ? brandForest : brandStone
             border.width: 1
 
             Rectangle {
@@ -171,6 +172,8 @@ Window {
                 height: 20
                 radius: 10
                 color: controlSwitch.down ? brandMossLight : brandCloud
+                border.color: brandStone
+                border.width: 1
 
                 Behavior on x {
                     NumberAnimation { duration: 150; easing.type: Easing.InOutQuad }
@@ -181,7 +184,7 @@ Window {
         contentItem: Text {
             text: controlSwitch.text
             font: controlSwitch.font
-            color: brandCloud
+            color: brandInk
             verticalAlignment: Text.AlignVCenter
             leftPadding: controlSwitch.text ? (controlSwitch.indicator.width + controlSwitch.spacing) : 0
             visible: controlSwitch.text !== ""
@@ -198,7 +201,7 @@ Window {
             rightPadding: (rootComboBox.indicator ? rootComboBox.indicator.width : 10) + rootComboBox.spacing
             text: rootComboBox.displayText
             font: rootComboBox.font
-            color: brandCloud
+            color: brandInk
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
@@ -207,7 +210,7 @@ Window {
             implicitWidth: 120
             implicitHeight: 32
             color: brandInputBg
-            border.color: rootComboBox.hovered ? brandScreenGreen : brandStone
+            border.color: rootComboBox.hovered ? brandForest : brandStone
             border.width: 1
             radius: 4
         }
@@ -1063,6 +1066,7 @@ Window {
 
                 BrandButton {
                     id: settingsButton
+                    objectName: "settingsButton"
                     checkable: true
                     checked: false
                     Layout.preferredHeight: 65
